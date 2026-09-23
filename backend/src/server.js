@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import healthRouter from "./routes/health.js";
+import profileRouter from "./routes/profile.js";
 
 // Re-load .env explicitly from the repo root, since this file runs from
 // inside backend/ and dotenv's default only looks in the current folder.
@@ -22,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api", healthRouter);
+app.use("/api", profileRouter);
 
 app.listen(PORT, () => {
   console.log(`FitPrep backend running on http://localhost:${PORT}`);
