@@ -40,6 +40,8 @@ fitprep-app/
 
 ## Setup
 
+Use Node.js 22.12 or newer (Node.js 24 recommended) with npm for the frontend toolchain.
+
 **1. Clone and install dependencies**
 
 ```bash
@@ -81,3 +83,31 @@ The frontend runs on `http://localhost:5173`, the backend on `http://localhost:4
 - Create a branch per feature or fix: `feature/short-description` (e.g. `feature/batch-plan-generator`).
 - Open a pull request into `main` when your branch is ready, and get at least one review before merging.
 - Keep commits small and focused, with clear messages describing *what* changed and *why*.
+
+## Meal planner
+
+The frontend now includes an original meal-prep workflow inspired by Fitia’s public
+[planning guide](https://fitia.app/help/articles/create-meal-plan-fitia/) and
+[feature list](https://fitia.app/features/).
+
+- Select a start date, daily calorie target, food preference, and meal variety.
+- Generate seven days of breakfast, lunch, and dinner; swap individual meals.
+- Add a partner with a separate calorie target and view each person's portions.
+- Shop from a combined ingredient list, check off items, and download a text copy.
+- View batch quantities and cooking steps, and track prepared recipes.
+
+Plans and checklists are saved in this browser's local storage. This first version
+uses nine original starter recipes with estimated nutrition; it is not connected
+to Fitia or a verified nutrition database. Calories scale recipe portions; protein,
+carbohydrate, and fat totals are reported, not independently optimized. It supports
+all-food and vegetarian plans, not allergy filtering. Recipe visuals are illustrations.
+Only one week is saved at a time; generating another replaces it. Cross-device
+accounts and Supabase persistence are not implemented for the planner yet.
+
+Validation (Node.js 22.12+):
+
+```bash
+cd frontend
+npm test
+npm run build
+```
