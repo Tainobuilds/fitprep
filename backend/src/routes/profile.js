@@ -7,7 +7,7 @@
 // the calculated numbers with their own custom values) is a small follow-up
 // once this is wired into the frontend and there's somewhere to save it.
 import { Router } from "express";
-import { calculateMacroTargets } from "../lib/macros.js";
+import { calculateMacroTargets, ValidationError } from "../lib/macros.js";
 
 const router = Router();
 
@@ -16,7 +16,14 @@ router.post("/profile/macros", (req, res) => {
     const targets = calculateMacroTargets(req.body);
     res.json(targets);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err instanceof ValidationError) {
+      // Field-level errors, so the form can highlight the specific bad input
+      // instead of showing one generic message.
+      res.status(400).json({ errors: err.errors });
+    } else {
+      console.error(err);
+      res.status(500).json({ error: "Unexpected server error" });
+    }
   }
 });
 

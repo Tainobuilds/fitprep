@@ -23,22 +23,60 @@ const GOAL_CALORIE_ADJUSTMENTS = {
   muscle_gain: 300, // modest surplus to limit fat gain
 };
 
-export function calculateMacroTargets({ sex, age, weightLbs, heightIn, activityLevel, goal }) {
-  const missing = ["sex", "age", "weightLbs", "heightIn", "activityLevel", "goal"].filter(
-    (field) => arguments[0][field] === undefined || arguments[0][field] === null
-  );
-  if (missing.length > 0) {
-    throw new Error(`Missing required field(s): ${missing.join(", ")}`);
+export class ValidationError extends Error {
+  constructor(errors) {
+    super("Invalid profile input");
+    this.name = "ValidationError";
+    this.errors = errors;
+  }
+}
+
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+// Real-world bounds, not just "is it present" — catches negatives, zeros,
+// and nonsense values (e.g. age 9999) that would otherwise produce a
+// technically-computed but meaningless macro target.
+function validateProfile(input) {
+  const { sex, age, weightLbs, heightIn, activityLevel, goal } = input ?? {};
+  const errors = [];
+
+  if (sex !== "male" && sex !== "female") {
+    errors.push({ field: "sex", message: 'sex must be exactly "male" or "female"' });
+  }
+  if (!isFiniteNumber(age) || age < 13 || age > 100) {
+    errors.push({ field: "age", message: "age must be a number between 13 and 100" });
+  }
+  if (!isFiniteNumber(weightLbs) || weightLbs <= 0 || weightLbs > 600) {
+    errors.push({ field: "weightLbs", message: "weightLbs must be a positive number, up to 600" });
+  }
+  if (!isFiniteNumber(heightIn) || heightIn <= 0 || heightIn > 96) {
+    errors.push({ field: "heightIn", message: "heightIn must be a positive number, up to 96 (8 ft)" });
   }
   if (!(activityLevel in ACTIVITY_MULTIPLIERS)) {
-    throw new Error(
-      `Invalid activityLevel "${activityLevel}" — expected one of: ${Object.keys(ACTIVITY_MULTIPLIERS).join(", ")}`
-    );
+    errors.push({
+      field: "activityLevel",
+      message: `activityLevel must be one of: ${Object.keys(ACTIVITY_MULTIPLIERS).join(", ")}`,
+    });
   }
   if (!(goal in GOAL_CALORIE_ADJUSTMENTS)) {
-    throw new Error(`Invalid goal "${goal}" — expected one of: ${Object.keys(GOAL_CALORIE_ADJUSTMENTS).join(", ")}`);
+    errors.push({
+      field: "goal",
+      message: `goal must be one of: ${Object.keys(GOAL_CALORIE_ADJUSTMENTS).join(", ")}`,
+    });
   }
 
+  return errors;
+}
+
+export function calculateMacroTargets(input) {
+  const errors = validateProfile(input);
+  if (errors.length > 0) {
+    throw new ValidationError(errors);
+  }
+
+  const { sex, age, weightLbs, heightIn, activityLevel, goal } = input;
   const weightKg = weightLbs * 0.453592;
   const heightCm = heightIn * 2.54;
 
