@@ -1718,3 +1718,19 @@ dialog::backdrop {
     transition:none!important
   }
 }
+
+/* Companion app launcher: Measure/Match's own palette. */
+.nav-item.measure-match-link {
+  background:#c8ff00;
+  color:#090909;
+  font-weight:750;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.nav-item.measure-match-link:hover { background:#b9ed00; }
+@media(max-width:800px) {
+  nav { flex-wrap:wrap; }
+}
+@media(max-width:580px) {
+  .nav-item.measure-match-link { flex-basis:100%; }
+}
