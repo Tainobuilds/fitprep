@@ -38,7 +38,7 @@ test('household groceries combine duplicates and match batch ingredients', () =>
   }
   assert.equal(batches(duo).reduce((sum, b) => sum + b.portions, 0), 42);
 });
-test('swap updates only selected meal, preserves targets, and invalidates checklists', () => {
+test('swap updates only selected meal, preserves targets, and clears affected progress', () => {
   const p = generate(defaults); p.checked = ['Chicken breast, raw']; p.prepped = ['chicken-bowl'];
   const next = swap(p, 0, 1, 'tofu-bowl');
   assert.equal(next.days[0][1].recipeId, 'tofu-bowl');
@@ -47,6 +47,55 @@ test('swap updates only selected meal, preserves targets, and invalidates checkl
   near(totals(next.days[0]).calories, 2000);
   assert.deepEqual(next.checked, []); assert.deepEqual(next.prepped, []);
   assert.notDeepEqual(groceries(next), groceries(p));
+});
+test('swaps preserve unrelated progress and recheck changed shared ingredients and batches', () => {
+  for (const household of [false, true]) {
+    const p = generate({ ...defaults, household, partnerCalories: 3000 });
+    p.checked = groceries(p).map(i => i.name);
+    p.prepped = batches(p).map(b => b.recipe.id);
+    const original = JSON.stringify(p);
+    const next = swap(p, 0, 1, 'tofu-bowl');
+    assert.ok(next.checked.includes('Rolled oats, dry'));
+    assert.ok(next.prepped.includes('berry-oats'));
+    for (const name of ['Chicken breast, raw', 'Firm tofu', 'Brown rice, dry', 'Olive oil']) assert.ok(!next.checked.includes(name), name);
+    for (const id of ['chicken-bowl', 'tofu-bowl']) assert.ok(!next.prepped.includes(id), id);
+    near(totals(next.days[0]).calories, 2000);
+    near(totals(next.days[0], 1.5).calories, 3000);
+    for (const item of groceries(next)) near(item.grams, batches(next).reduce((sum, b) => sum + (b.recipe.ingredients.find(i => i.name === item.name)?.grams ?? 0) * b.factor, 0));
+    assert.deepEqual(parsePlan(JSON.stringify(next)), next);
+    assert.equal(JSON.stringify(p), original);
+    assert.deepEqual(swap(p, 0, 1, 'chicken-bowl'), p);
+  }
+});
+test('swapping the final occurrence removes obsolete grocery and prep checks', () => {
+  let p = generate({ ...defaults, variety: 'minimal' });
+  for (let d = 0; d < 6; d++) p = swap(p, d, 1, 'tofu-bowl');
+  p.checked = ['Chicken breast, raw', 'Rolled oats, dry'];
+  p.prepped = ['chicken-bowl', 'berry-oats'];
+  const next = swap(p, 6, 1, 'tofu-bowl');
+  assert.deepEqual(next.checked, ['Rolled oats, dry']);
+  assert.deepEqual(next.prepped, ['berry-oats']);
+  assert.ok(!groceries(next).some(i => i.name === 'Chicken breast, raw'));
+});
+test('saved factors are rebuilt and affected completion cannot survive corrected quantities', () => {
+  for (const factor of [19, -1, null, '19']) {
+    const p = generate({ ...defaults, household: true, partnerCalories: 3000 });
+    p.days[0][0].factor = factor;
+    p.checked = ['Rolled oats, dry', 'not-an-ingredient']; p.prepped = ['berry-oats', 'unknown'];
+    const restored = parsePlan(JSON.stringify(p));
+    assert.ok(restored);
+    near(totals(restored.days[0]).calories, 2000);
+    near(totals(restored.days[0], 1.5).calories, 3000);
+    assert.deepEqual(restored.checked, []); assert.deepEqual(restored.prepped, []);
+  }
+});
+test('saved dates must be real dates with a complete representable week', () => {
+  const p = generate(defaults);
+  for (const start of ['2026-02-31', '2026-02-29', '2026-04-31', '0000-01-01', '9999-12-26', '2026-13-01', '2026-01-00']) {
+    assert.equal(parsePlan(JSON.stringify({ ...p, start })), null, start);
+    assert.throws(() => generate(defaults, 0, start), undefined, start);
+  }
+  for (const start of ['2028-02-29', '2026-12-31', '9999-12-25']) assert.equal(parsePlan(JSON.stringify(generate(defaults, 0, start))).start, start);
 });
 test('persistence handles corrupt, missing, and obsolete data', () => {
   const p = generate(defaults);

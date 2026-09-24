@@ -48,20 +48,31 @@ export function monday(date = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 export function dateAt(start: string, offset: number) { const d = new Date(`${start}T12:00:00`); d.setDate(d.getDate() + offset); return d; }
+function validStart(start: unknown): start is string {
+  if (typeof start !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return false;
+  const [year, month, day] = start.split('-').map(Number);
+  const date = dateAt(start, 0), end = dateAt(start, 6);
+  return year >= 1 && date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day && end.getFullYear() <= 9999;
+}
+const portion = (recipe: Recipe, calories: number, slot: number): Meal => ({ recipeId: recipe.id, factor: calories * [0.25, 0.35, 0.4][slot] / kcal(recipe) });
 export function generate(settings: Settings, generation = 0, start = monday()): Plan {
   if (![settings.calories, settings.partnerCalories].every(n => Number.isFinite(n) && n >= 1000 && n <= 5000)) throw new Error('Enter calorie targets between 1,000 and 5,000.');
+  if (!validStart(start)) throw new Error('Choose a valid start date with room for all seven days.');
+  if (!Number.isSafeInteger(generation) || generation < 0) throw new Error('Invalid plan generation.');
   const days = Array.from({ length: 7 }, (_, day) => slots.map((slot, index) => {
     const options = eligible(slot, settings);
     const rotation = settings.variety === 'minimal' ? 0 : settings.variety === 'balanced' ? Math.floor(day / 3) : day;
     const recipe = options[(rotation + generation) % options.length];
-    return { recipeId: recipe.id, factor: settings.calories * [0.25, 0.35, 0.4][index] / kcal(recipe) };
+    return portion(recipe, settings.calories, index);
   }));
   return { version: 1, start, settings: { ...settings }, days, checked: [], prepped: [], generation };
 }
 export function swap(plan: Plan, day: number, slot: number, recipeId: string): Plan {
+  if (!Number.isInteger(day) || day < 0 || day >= 7 || !Number.isInteger(slot) || slot < 0 || slot >= 3) throw new Error('Choose a valid meal.');
   const recipe = eligible(slots[slot], plan.settings).find(r => r.id === recipeId);
   if (!recipe) throw new Error('Choose a recipe that matches this meal and diet.');
-  return { ...plan, checked: [], prepped: [], days: plan.days.map((meals, d) => meals.map((meal, s) => d === day && s === slot ? { recipeId, factor: plan.settings.calories * [0.25, 0.35, 0.4][slot] / kcal(recipe) } : meal)) };
+  const next = { ...plan, days: plan.days.map((meals, d) => meals.map((meal, s) => d === day && s === slot ? portion(recipe, plan.settings.calories, slot) : meal)) };
+  return preserveProgress(plan, next);
 }
 export function totals(meals: Meal[], multiplier = 1) {
   return meals.reduce((sum, meal) => {
@@ -88,15 +99,30 @@ export function batches(plan: Plan) {
   return [...grouped.values()];
 }
 export const quantity = (grams: number) => grams >= 1000 ? `${(grams / 1000).toFixed(2)} kg` : `${Math.round(grams)} g`;
+// Compare unrounded amounts, allowing only floating-point summation noise.
+function preserveProgress(previous: Plan, next: Plan): Plan {
+  const same = (a: number | undefined, b: number) => a !== undefined && Math.abs(a - b) <= 1e-9;
+  const oldItems = new Map(groceries(previous).map(i => [i.name, i.grams]));
+  const oldBatches = new Map(batches(previous).map(b => [b.recipe.id, b.factor]));
+  return { ...next,
+    checked: groceries(next).filter(i => previous.checked.includes(i.name) && same(oldItems.get(i.name), i.grams)).map(i => i.name),
+    prepped: batches(next).filter(b => previous.prepped.includes(b.recipe.id) && same(oldBatches.get(b.recipe.id), b.factor)).map(b => b.recipe.id),
+  };
+}
 // Validate saved data before allowing it back into the planner (including older schemas).
 export function parsePlan(raw: string | null): Plan | null {
   try {
     const p = JSON.parse(raw ?? 'null');
-    if (!p || p.version !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(p.start) || !Number.isFinite(dateAt(p.start, 0).getTime())) return null;
+    if (!p || p.version !== 1 || !validStart(p.start)) return null;
     const s = p.settings;
     if (!s || ![s.calories, s.partnerCalories].every(n => typeof n === 'number' && n >= 1000 && n <= 5000) || typeof s.household !== 'boolean' || typeof s.vegetarian !== 'boolean' || !['minimal', 'balanced', 'high'].includes(s.variety)) return null;
-    if (!Array.isArray(p.days) || p.days.length !== 7 || !p.days.every((day: Meal[]) => Array.isArray(day) && day.length === 3 && day.every((meal, i) => meal && Number.isFinite(meal.factor) && meal.factor > 0 && meal.factor < 20 && eligible(slots[i], s).some(r => r.id === meal.recipeId)))) return null;
-    if (![p.checked, p.prepped].every(list => Array.isArray(list) && list.every(item => typeof item === 'string')) || !Number.isInteger(p.generation) || p.generation < 0) return null;
-    return p as Plan;
+    if (!Array.isArray(p.days) || p.days.length !== 7 || !p.days.every((day: Meal[]) => Array.isArray(day) && day.length === 3 && day.every((meal, i) => meal && eligible(slots[i], s).some(r => r.id === meal.recipeId)))) return null;
+    if (![p.checked, p.prepped].every(list => Array.isArray(list) && list.every(item => typeof item === 'string')) || !Number.isSafeInteger(p.generation) || p.generation < 0) return null;
+    const settings: Settings = { calories: s.calories, partnerCalories: s.partnerCalories, household: s.household, vegetarian: s.vegetarian, variety: s.variety };
+    const days = p.days.map((day: Meal[]) => day.map((meal, slot) => portion(recipeFor(meal), settings.calories, slot)));
+    const next: Plan = { version: 1, start: p.start, settings, days, checked: [], prepped: [], generation: p.generation };
+    // Invalid old factors cannot support reliable progress comparisons.
+    if (!p.days.every((day: Meal[]) => day.every(meal => Number.isFinite(meal.factor) && meal.factor > 0 && meal.factor < 20))) return next;
+    return preserveProgress(p, next);
   } catch { return null; }
 }
