@@ -939,7 +939,16 @@ footer {
   white-space:nowrap;
   font-size:10px;
   font-weight:500;
-  color:#7d8a72
+  color:#7d8a72;
+  text-align:right
+}
+
+.grocery-item strong small {
+  display:block;
+  margin-top:2px;
+  font-size:9px;
+  font-weight:400;
+  color:#9fa796
 }
 
 .grocery-item.done>span {
