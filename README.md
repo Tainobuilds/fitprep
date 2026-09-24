@@ -104,6 +104,13 @@ all-food and vegetarian plans, not allergy filtering. Recipe visuals are illustr
 Only one week is saved at a time; generating another replaces it. Cross-device
 accounts and Supabase persistence are not implemented for the planner yet.
 
+Swapping a meal preserves shopping and prep checkmarks when their required
+quantities stay unchanged. Changed quantities are unchecked for review, and
+obsolete items are removed. Generating a new week still resets all progress.
+When loading a saved plan, portions are recalculated from validated calorie
+targets and recipe choices. Invalid calendar dates are rejected; completion
+checks for corrected quantities are cleared so they can be reviewed.
+
 Validation (Node.js 22.12+):
 
 ```bash
