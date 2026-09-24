@@ -75,6 +75,21 @@ cd frontend && npm run dev
 The frontend runs on `http://localhost:5173`, the backend on `http://localhost:4000`
 (or whatever `PORT` you set).
 
+## Security
+
+- **Secrets stay server-side.** `DATABASE_URL` and `NUTRITION_API_KEY` are only ever read by the
+  backend. **Never prefix a secret with `VITE_`** — Vite bundles those into the JavaScript every
+  visitor downloads, so they're public even if `.env` is git-ignored.
+- **The browser only talks to our backend.** Third-party calls (e.g. the nutrition API) go
+  browser → our API → provider, so the key never leaves the server.
+- **Supabase:** the anon key is designed to be public, but only safe with Row Level Security enabled
+  on every table. Turn RLS on before storing any user data.
+- **API hardening:** `helmet` security headers, CORS limited to `CORS_ORIGIN`, rate limiting
+  (100 requests / 15 min / IP), a 10kb request body cap, and strict input validation.
+- **Not built yet:** authentication. Routes that read or write user data (profiles, plans, partner
+  sync) must verify a logged-in user before they ship.
+- Run `npm audit` in both `frontend/` and `backend/` before merging.
+
 ## Contributing
 
 - `main` is always deployable — don't commit directly to it.
