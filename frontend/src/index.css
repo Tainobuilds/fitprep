@@ -1,10 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Design system borrowed from Racheal's Measure/Match companion
+   app: near-black + volt lime + warm paper, bold condensed
+   uppercase headlines, monospace uppercase labels, hard square
+   edges (no border-radius), thin 1px borders instead of soft
+   shadows. Layout mechanics below (grid columns, flex, widths,
+   breakpoints) are unchanged from the previous version — only
+   color, typography, radius, and shadow values changed.
+   ============================================================ */
 :root {
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  color:#263c32;
-  background:#fafbf8;
+  --ink:#0a0a0a;
+  --volt:#c8ff00;
+  --volt-deep:#516800;
+  --paper:#f4f3ee;
+  --line:#cbc9c0;
+  --line-dark:#333;
+  --muted:#6b6b62;
+  --danger:#9e2018;
+  --font-sans:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  font-family:var(--font-sans);
+  color:var(--ink);
+  background:var(--paper);
   font-synthesis:none
 }
 
@@ -36,8 +56,8 @@ button:disabled {
 }
 
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
-  outline:3px solid #c7903a;
-  outline-offset:4px
+  outline:3px solid #6090ff;
+  outline-offset:3px
 }
 
 h1,h2,h3,p {
@@ -55,8 +75,9 @@ button,a {
 
 .sidebar {
   width:240px;
-  background:#fff;
-  border-right:1px solid #e7ebe4;
+  background:var(--ink);
+  color:#fff;
+  border-right:1px solid #000;
   padding:38px 24px 20px;
   position:fixed;
   inset:0 auto 0 0;
@@ -69,32 +90,40 @@ button,a {
   align-items:center;
   gap:9px;
   text-decoration:none;
-  font-weight:780;
-  font-size:30px;
-  letter-spacing:-1.5px;
-  color:#244c39
+  font-weight:950;
+  font-size:22px;
+  letter-spacing:-.5px;
+  text-transform:uppercase;
+  color:#fff
 }
 
 .brand-icon {
-  background:#eaf1e5;
-  border-radius:12px;
+  background:var(--volt);
+  border-radius:0;
   display:grid;
   place-items:center;
-  width:38px;
-  height:38px
+  width:34px;
+  height:34px;
+  color:var(--ink);
+  transform:skew(-12deg)
+}
+
+.brand-icon svg {
+  transform:skew(12deg)
 }
 
 .brand-dot {
-  margin-left:-8px;
-  color:#b2c579
+  margin-left:-4px;
+  color:var(--volt)
 }
 
 .sidebar-label {
-  font-size:9px;
+  font:9px var(--font-mono);
   letter-spacing:1.7px;
   font-weight:700;
-  color:#87938b;
-  margin:51px 0 18px 10px
+  color:#999;
+  margin:51px 0 18px 2px;
+  text-transform:uppercase
 }
 
 nav {
@@ -107,28 +136,53 @@ nav {
   align-items:center;
   gap:13px;
   padding:14px 15px;
-  border-radius:9px;
-  font-size:13px;
-  color:#758077;
+  border-radius:0;
+  font:11px var(--font-mono);
+  font-weight:700;
+  letter-spacing:.6px;
+  color:#aaa;
   text-align:left;
-  font-weight:550
+  text-transform:uppercase;
+  text-decoration:none
 }
 
 .nav-item:hover {
-  background:#f6f8f3
+  background:#1a1a1a;
+  color:#fff
 }
 
 .nav-item.active {
-  color:#315b40;
-  background:#edf3e7
+  color:var(--ink);
+  background:var(--volt)
 }
 
 .nav-count {
-  font-size:10px;
+  font:9px var(--font-mono);
   margin-left:auto;
-  background:#e0e9d7;
+  background:#000;
+  color:var(--volt);
   padding:2px 5px;
-  border-radius:4px
+  border-radius:0
+}
+
+.nav-item.active .nav-count {
+  background:var(--ink);
+  color:var(--volt)
+}
+
+/* Companion app launcher (Racheal's own palette — already volt/ink,
+   so it now matches the rest of the app natively instead of standing out). */
+.nav-item.measure-match-link {
+  background:var(--volt);
+  color:var(--ink);
+  font-weight:750;
+  text-decoration:none;
+  white-space:nowrap
+}
+
+.nav-item.measure-match-link:hover {
+  background:#b9ed00;
+  color:var(--ink)
 }
 
 .sidebar-bottom {
@@ -137,62 +191,77 @@ nav {
 }
 
 .kitchen-note {
-  background:#f6f6ee;
-  border-radius:12px;
+  background:#141414;
+  border:1px solid #2a2a2a;
+  border-radius:0;
   padding:22px 18px;
-  color:#55754d
+  color:#ccc
 }
 
 .kitchen-note strong {
   display:block;
-  font-family:Georgia,serif;
-  font-size:21px;
-  font-weight:400;
-  line-height:1.35;
-  margin:13px 0 9px
+  font-family:var(--font-sans);
+  font-size:17px;
+  font-weight:950;
+  letter-spacing:-.3px;
+  line-height:1.25;
+  margin:13px 0 9px;
+  color:#fff;
+  text-transform:uppercase
 }
 
 .kitchen-note p {
   font-size:11px;
   line-height:1.8;
-  color:#7f8979
+  color:#999
 }
 
 .profile {
-  border-top:1px solid #e9ece5;
+  border-top:1px solid #2a2a2a;
   margin-top:28px;
   padding-top:22px;
   display:flex;
   align-items:center;
   gap:10px;
   width:100%;
-  text-align:left
+  text-align:left;
+  color:#fff
 }
 
 .avatar {
   display:grid;
   place-items:center;
-  width:33px;
-  height:33px;
-  border-radius:50%;
-  background:#f0dfc9;
-  font-size:12px
+  width:32px;
+  height:32px;
+  border-radius:0;
+  background:var(--volt);
+  color:var(--ink);
+  font:12px var(--font-mono);
+  font-weight:800;
+  transform:skew(-12deg)
+}
+
+.avatar span {
+  transform:skew(12deg)
 }
 
 .profile strong {
   font-size:11px;
-  display:block
+  display:block;
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .profile small {
   font-size:10px;
   display:block;
-  color:#8a938a;
+  color:#999;
   margin-top:4px
 }
 
 .profile>svg {
-  margin-left:auto
+  margin-left:auto;
+  color:#999
 }
 
 .workspace {
@@ -202,38 +271,41 @@ nav {
 
 .topbar {
   height:75px;
-  border-bottom:1px solid #e7ebe4;
+  border-bottom:1px solid var(--ink);
   display:flex;
   justify-content:space-between;
   align-items:center;
   padding:0 44px;
-  background:#ffffffaa
+  background:var(--paper)
 }
 
 .topbar>span {
-  font-size:9px;
+  font:9px var(--font-mono);
   letter-spacing:2px;
-  font-weight:650;
-  color:#788375
+  font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .save-state {
   display:flex;
   align-items:center;
   gap:7px;
-  font-size:10px;
-  color:#7c897d
+  font:10px var(--font-mono);
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .status-dot {
-  width:6px;
-  height:6px;
-  background:#7fa375;
-  border-radius:50%
+  width:7px;
+  height:7px;
+  background:var(--volt-deep);
+  border-radius:0
 }
 
 .status-dot.error {
-  background:#ae5942
+  background:var(--danger)
 }
 
 main {
@@ -251,24 +323,26 @@ main {
 }
 
 .eyebrow {
-  font-size:9px;
+  font:9px var(--font-mono);
   letter-spacing:1.6px;
-  font-weight:700;
-  color:#859170
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .page-heading h1 {
-  font-family:Georgia,"Times New Roman",serif;
-  font-weight:400;
-  font-size:36px;
-  letter-spacing:-1px;
+  font-family:var(--font-sans);
+  font-weight:950;
+  font-size:40px;
+  letter-spacing:-1.5px;
+  text-transform:uppercase;
   margin:9px 0 10px;
-  line-height:1.15
+  line-height:.95
 }
 
 .page-heading p {
   font-size:12px;
-  color:#819080
+  color:var(--muted)
 }
 
 .secondary,.primary,.banner-button {
@@ -276,31 +350,34 @@ main {
   align-items:center;
   justify-content:center;
   gap:9px;
-  border-radius:7px;
-  font-size:11px;
-  font-weight:600;
-  padding:12px 16px;
+  border-radius:0;
+  font:10px var(--font-mono);
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:13px 18px;
   white-space:nowrap
 }
 
 .secondary {
-  border:1px solid #dce2d5;
-  background:#fff
+  border:1px solid var(--ink);
+  background:transparent
 }
 
 .secondary:hover {
-  background:#f0f4eb
+  background:var(--ink);
+  color:var(--volt)
 }
 
 .primary {
-  background:#315840;
-  color:white;
-  padding:15px 20px;
-  font-size:12px
+  background:var(--ink);
+  color:var(--volt);
+  padding:16px 22px;
+  font-size:11px
 }
 
 .primary:hover {
-  background:#244631
+  background:#242424
 }
 
 .full {
@@ -312,10 +389,11 @@ main {
   display:flex;
   align-items:center;
   gap:19px;
-  background:#edf2e7;
-  border:1px solid #e0e8d7;
+  background:var(--ink);
+  color:#fff;
+  border:1px solid #000;
   padding:23px 27px;
-  border-radius:12px
+  border-radius:0
 }
 
 .week-mark {
@@ -323,35 +401,50 @@ main {
   place-items:center;
   width:54px;
   height:54px;
-  border-radius:12px;
-  background:#dfe8d5;
-  color:#607954
+  border-radius:0;
+  background:var(--volt);
+  color:var(--ink);
+  transform:skew(-12deg)
+}
+
+.week-mark svg {
+  transform:skew(12deg)
 }
 
 .week-banner .eyebrow {
   font-size:8px;
-  color:#6c835c
+  color:var(--volt)
 }
 
 .week-banner h2 {
-  font-size:20px;
-  font-family:Georgia,serif;
-  font-weight:400;
-  margin:6px 0 7px
+  font-size:22px;
+  font-family:var(--font-sans);
+  font-weight:950;
+  letter-spacing:-.5px;
+  text-transform:uppercase;
+  margin:6px 0 7px;
+  color:#fff
 }
 
 .week-banner p {
   display:flex;
   gap:10px;
-  color:#728368;
-  font-size:10px
+  color:#999;
+  font:10px var(--font-mono);
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .banner-button {
   margin-left:auto;
-  border:1px solid #cad6bd;
-  color:#586d4c;
-  background:#f6f9f0
+  border:1px solid var(--volt);
+  color:var(--volt);
+  background:transparent
+}
+
+.banner-button:hover {
+  background:var(--volt);
+  color:var(--ink)
 }
 
 .section-heading {
@@ -363,166 +456,204 @@ main {
 }
 
 .section-heading h2 {
-  font-size:17px;
-  font-weight:600;
-  letter-spacing:-.35px
+  font-family:var(--font-sans);
+  font-weight:950;
+  font-size:26px;
+  letter-spacing:-.8px;
+  text-transform:uppercase
 }
 
 .person-switch {
   display:flex;
-  gap:3px;
-  border:1px solid #e5e9df;
-  border-radius:7px;
-  padding:3px;
-  background:#f3f5ef
+  gap:0;
+  border:1px solid var(--ink);
+  border-radius:0;
+  padding:0;
+  background:transparent
 }
 
 .person-switch button {
-  padding:6px 12px;
-  font-size:10px;
-  border-radius:5px;
-  color:#839078
+  padding:9px 16px;
+  font:10px var(--font-mono);
+  font-weight:700;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  border-radius:0;
+  color:var(--ink);
+  border-right:1px solid var(--ink)
+}
+
+.person-switch button:last-child {
+  border-right:0
 }
 
 .person-switch .selected {
-  background:white;
-  color:#3f5b38;
-  box-shadow:0 1px 3px #0000000a
+  background:var(--ink);
+  color:var(--volt);
+  box-shadow:none
 }
 
 .days {
   display:grid;
   grid-template-columns:repeat(7,1fr);
-  gap:9px;
-  margin-bottom:19px
+  gap:0;
+  margin-bottom:19px;
+  border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink)
 }
 
 .days button {
-  border:1px solid #e4e9df;
-  border-radius:9px;
+  border:0;
+  border-right:1px solid var(--line);
+  border-radius:0;
   background:#fff;
   display:flex;
   flex-direction:column;
   align-items:center;
-  padding:12px;
-  gap:7px
+  padding:14px 8px;
+  gap:8px
+}
+
+.days button:last-child {
+  border-right:0
 }
 
 .days span {
-  font-size:10px;
-  color:#86907f
+  font:9px var(--font-mono);
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .days strong {
   font-size:18px;
-  font-weight:500
+  font-weight:800
 }
 
 .days i {
   display:block;
-  width:4px;
-  height:4px;
-  border-radius:50%;
-  background:#d6dfce
+  width:5px;
+  height:5px;
+  border-radius:0;
+  background:var(--line)
 }
 
 .days .selected {
-  background:#335b41;
-  border-color:#335b41;
-  color:white;
-  box-shadow:0 3px 7px #2e533019
+  background:var(--ink);
+  border-color:var(--ink);
+  color:var(--volt);
+  box-shadow:none
 }
 
 .days .selected span {
-  color:#d2dfcc
+  color:#999
 }
 
 .days .selected i {
-  background:#c8d8af
+  background:var(--volt)
 }
 
 .nutrition {
   display:flex;
   align-items:center;
-  border:1px solid #e4e9de;
-  border-radius:9px;
-  padding:21px 19px;
-  background:#fff;
+  border:0;
+  border-radius:0;
+  padding:0;
+  background:var(--ink);
+  color:#fff;
   margin-bottom:23px;
-  gap:22px
+  gap:0
 }
 
 .nutrition-title {
   display:flex;
   align-items:center;
   gap:10px;
-  margin-right:auto
+  margin-right:auto;
+  padding:21px 22px;
+  border-right:1px solid #333
 }
 
 .mini-leaf {
   display:grid;
   place-items:center;
-  border-radius:50%;
-  width:34px;
-  height:34px;
-  background:#f1f5ea;
-  color:#839965
+  border-radius:0;
+  width:32px;
+  height:32px;
+  background:var(--volt);
+  color:var(--ink);
+  transform:skew(-12deg)
+}
+
+.mini-leaf svg {
+  transform:skew(12deg)
 }
 
 .nutrition-title strong {
   font-size:11px;
-  font-weight:600;
-  display:block
+  font-weight:800;
+  display:block;
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .nutrition-title small {
   display:block;
-  font-size:8px;
-  color:#8d9786;
-  margin-top:5px
+  font:8px var(--font-mono);
+  color:#999;
+  margin-top:5px;
+  text-transform:uppercase
+}
+
+.macro {
+  padding:21px 22px;
+  border-right:1px solid #333
+}
+
+.macro:last-child {
+  border-right:0
 }
 
 .macro strong {
-  font-size:19px;
-  font-weight:600;
-  letter-spacing:-.6px;
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:-.8px;
   display:block
 }
 
 .macro strong small {
   font-size:9px;
   font-weight:400;
-  color:#84907c;
-  letter-spacing:0
+  color:#999;
+  letter-spacing:0;
+  font-family:var(--font-mono)
 }
 
 .macro>span {
-  font-size:8px;
+  font:8px var(--font-mono);
   display:flex;
   align-items:center;
   gap:4px;
-  color:#84907c;
-  margin-top:5px
+  color:#999;
+  margin-top:6px;
+  text-transform:uppercase;
+  letter-spacing:.6px
 }
 
 .macro i {
   width:5px;
   height:5px;
-  border-radius:50%;
-  background:#a8bd91
-}
-
-.macro.carbs i {
-  background:#e2bc7a
-}
-
-.macro.fat i {
-  background:#b9a6cb
+  border-radius:0;
+  background:var(--volt)
 }
 
 .macro.calories {
-  border-right:1px solid #e8ece3;
-  padding-right:22px
+  background:#141414;
+  box-shadow:inset 0 3px var(--volt)
+}
+
+.macro.calories strong {
+  color:var(--volt)
 }
 
 .meal-grid {
@@ -532,16 +663,15 @@ main {
 }
 
 .meal-card {
-  border:1px solid #e2e7dc;
-  background:white;
-  border-radius:12px;
+  border:1px solid var(--ink);
+  background:#fff;
+  border-radius:0;
   overflow:hidden;
-  transition:transform .2s,box-shadow .2s
+  transition:transform .15s
 }
 
 .meal-card:hover {
-  transform:translateY(-3px);
-  box-shadow:0 8px 24px #23361c09
+  transform:translateY(-3px)
 }
 
 .art-button {
@@ -558,62 +688,44 @@ main {
   overflow:hidden;
   display:grid;
   place-items:center;
-  background:#e6ead7
+  background:var(--paper);
+  border-bottom:1px solid var(--ink)
 }
 
-.sage {
-  background:#e5ebd9
-}
-
-.lavender {
-  background:#e8e2ed
-}
-
-.butter {
-  background:#f2e9ca
-}
-
-.peach {
-  background:#f1ddcb
-}
-
-.rose {
-  background:#eddbd6
-}
+.food-art.sage { box-shadow:inset 0 4px #4c6b3f }
+.food-art.lavender { box-shadow:inset 0 4px #5b4b8a }
+.food-art.butter { box-shadow:inset 0 4px #a67c00 }
+.food-art.peach { box-shadow:inset 0 4px #a4432b }
+.food-art.rose { box-shadow:inset 0 4px #8a2f4b }
 
 .food-orbit {
-  position:absolute;
-  width:230px;
-  height:230px;
-  border:1px solid #ffffff55;
-  border-radius:50%;
-  transform:translate(80px,-40px)
+  display:none
 }
 
 .plate {
-  width:125px;
-  height:125px;
-  background:#fffffff0;
-  border:9px solid #ffffffaa;
-  border-radius:50%;
-  box-shadow:5px 10px 14px #4c503515,inset 0 0 0 2px #eceee3;
+  width:118px;
+  height:118px;
+  background:#fff;
+  border:1px solid var(--ink);
+  border-radius:0;
+  box-shadow:none;
   display:grid;
   place-items:center;
-  transform:rotate(-10deg)
+  transform:skew(-8deg)
 }
 
 .plate span {
-  font-size:66px;
-  filter:drop-shadow(3px 5px 3px #6c65391a)
+  font-size:60px;
+  transform:skew(8deg);
+  filter:none
 }
 
 .food-sprig {
   position:absolute;
-  left:15%;
-  bottom:19%;
-  color:#76945b;
-  font-size:21px;
-  transform:rotate(20deg)
+  left:15px;
+  bottom:15px;
+  color:var(--volt-deep);
+  font-size:18px
 }
 
 .time-tag {
@@ -623,11 +735,12 @@ main {
   position:absolute;
   bottom:10px;
   right:10px;
-  background:#ffffffdd;
-  padding:5px 7px;
-  border-radius:5px;
-  font-size:8px;
-  color:#68705f
+  background:var(--ink);
+  color:var(--volt);
+  padding:5px 8px;
+  border-radius:0;
+  font:8px var(--font-mono);
+  text-transform:uppercase
 }
 
 .meal-content {
@@ -639,27 +752,28 @@ main {
   align-items:center;
   justify-content:space-between;
   text-transform:uppercase;
-  font-size:8px;
-  letter-spacing:1.2px;
-  color:#859277;
-  font-weight:600
+  font:9px var(--font-mono);
+  letter-spacing:1px;
+  color:var(--muted);
+  font-weight:700
 }
 
 .meal-label span {
-  font-size:7px;
-  letter-spacing:0;
-  text-transform:none;
-  color:#8c957f;
-  font-weight:400
+  font-size:8px;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  color:var(--volt-deep);
+  font-weight:700
 }
 
 .recipe-title {
   padding:0;
   margin:10px 0 12px;
   text-align:left;
-  font-family:Georgia,serif;
+  font-family:var(--font-sans);
   font-size:19px;
-  line-height:1.3;
+  font-weight:800;
+  line-height:1.25;
   min-height:49px;
   letter-spacing:-.3px
 }
@@ -668,36 +782,40 @@ main {
   display:flex;
   align-items:center;
   gap:10px;
-  font-size:9px;
-  color:#87917f
+  font:9px var(--font-mono);
+  color:var(--muted)
 }
 
 .meal-macros strong {
   font-size:10px;
-  color:#667553;
-  font-weight:500
+  color:var(--ink);
+  font-weight:800
 }
 
 .meal-footer {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  border-top:1px solid #edf0e7;
+  border-top:1px solid var(--line);
   margin-top:17px;
   padding:13px 0
 }
 
 .meal-footer>span {
-  font-size:8px;
-  color:#8a957f
+  font:8px var(--font-mono);
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .text-button {
   display:flex;
   gap:5px;
   align-items:center;
-  color:#526d43;
-  font-size:10px
+  color:var(--ink);
+  font:10px var(--font-mono);
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .bottom-callouts {
@@ -712,115 +830,143 @@ main {
   align-items:center;
   gap:13px;
   text-align:left;
-  border:1px solid #e3e8db;
-  border-radius:9px;
+  border:1px solid var(--ink);
+  border-radius:0;
   padding:19px 15px;
-  background:#f5f7ef
+  background:#fff
+}
+
+.bottom-callouts>button:hover {
+  background:var(--paper)
 }
 
 .callout-icon {
-  background:#e6ecda;
-  border-radius:8px;
+  background:var(--ink);
+  color:var(--volt);
+  border-radius:0;
   width:38px;
   height:38px;
   display:grid;
   place-items:center;
-  color:#819361
+  transform:skew(-12deg)
+}
+
+.callout-icon svg {
+  transform:skew(12deg)
 }
 
 .callout-icon.peach {
-  background:#f2e7d8;
-  color:#b49772
+  background:var(--volt);
+  color:var(--ink)
 }
 
 .bottom-callouts strong {
   display:block;
   font-size:11px;
-  font-weight:550
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.3px
 }
 
 .bottom-callouts small {
   display:block;
   font-size:9px;
-  color:#8b967f;
+  color:var(--muted);
   margin-top:5px
 }
 
 .bottom-callouts>button>svg {
   margin-left:auto;
   min-width:17px;
-  color:#8c9e78
+  color:var(--ink)
 }
 
 footer {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  border-top:1px solid #e8ecdf;
+  border-top:1px solid var(--ink);
   margin-top:35px;
-  padding-top:20px;
-  font-size:9px;
-  color:#909c86
+  padding:20px 0;
+  font:9px var(--font-mono);
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .footer-brand {
   display:flex;
   align-items:center;
-  gap:6px
+  gap:6px;
+  font-weight:800;
+  color:var(--ink)
 }
 
 .welcome {
-  background:#edf1e3;
+  background:var(--ink);
+  color:#fff;
   min-height:455px;
-  border-radius:15px;
+  border-radius:0;
   padding:49px;
   display:grid;
   grid-template-columns:1fr 1fr;
   align-items:center;
   gap:20px;
   overflow:hidden;
-  border:1px solid #e2e8d6
+  border:1px solid #000;
+  position:relative
 }
 
 .pill {
   display:inline-block;
-  font-size:8px;
-  letter-spacing:1px;
-  color:#70835b;
-  background:#e3eacf;
-  padding:7px 9px;
-  border-radius:5px
+  font:8px var(--font-mono);
+  letter-spacing:1.2px;
+  color:var(--ink);
+  background:var(--volt);
+  padding:8px 10px;
+  border-radius:0;
+  text-transform:uppercase;
+  font-weight:800
 }
 
 .welcome h2 {
-  font-family:Georgia,serif;
+  font-family:var(--font-sans);
   font-size:46px;
-  letter-spacing:-1.4px;
-  line-height:1.12;
-  font-weight:400;
-  margin:22px 0
+  letter-spacing:-2px;
+  line-height:.92;
+  font-weight:950;
+  text-transform:uppercase;
+  margin:22px 0;
+  color:#fff;
+  position:relative;
+  z-index:2
 }
 
 .welcome h2 em {
-  color:#7e965c;
-  font-weight:400
+  color:var(--volt);
+  font-style:normal
 }
 
 .welcome p {
-  color:#7b896f;
-  font-size:12px;
-  line-height:1.9;
+  color:#aaa;
+  font-size:13px;
+  line-height:1.8;
   max-width:330px;
-  margin-bottom:24px
+  margin-bottom:24px;
+  position:relative;
+  z-index:2
 }
 
 .welcome-points {
   display:flex;
-  gap:12px;
+  gap:14px;
   flex-wrap:wrap;
-  font-size:8px;
-  color:#7a896b;
-  margin-top:22px
+  font:8px var(--font-mono);
+  color:#999;
+  margin-top:22px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  position:relative;
+  z-index:2
 }
 
 .welcome-art {
@@ -831,16 +977,29 @@ footer {
 }
 
 .hero-bowl {
-  width:260px;
-  height:260px;
-  background:#ffffffe0;
-  border:17px solid #ffffffa0;
-  box-shadow:18px 23px 35px #56653617;
-  border-radius:50%;
-  font-size:148px;
+  width:240px;
+  height:240px;
+  background:var(--volt);
+  border:0;
+  box-shadow:none;
+  border-radius:0;
+  font-size:130px;
   display:grid;
   place-items:center;
-  transform:rotate(-15deg)
+  transform:skew(-10deg);
+  position:relative;
+  z-index:2
+}
+
+.hero-bowl::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  right:-14vw;
+  top:-30%;
+  width:30vw;
+  height:160%;
+  background:#141414
 }
 
 .floating-label {
@@ -848,13 +1007,16 @@ footer {
   display:flex;
   align-items:center;
   gap:8px;
-  font-size:10px;
-  background:#fff;
-  padding:13px;
-  border-radius:9px;
-  box-shadow:0 6px 20px #4b614815;
-  transform:rotate(-5deg);
-  white-space:nowrap
+  font:9px var(--font-mono);
+  background:var(--ink);
+  color:#fff;
+  padding:13px 14px;
+  border-radius:0;
+  box-shadow:none;
+  border:1px solid var(--volt);
+  text-transform:uppercase;
+  white-space:nowrap;
+  z-index:3
 }
 
 .floating-label.top {
@@ -864,24 +1026,24 @@ footer {
 
 .floating-label.bottom {
   bottom:10px;
-  left:-10px;
-  transform:rotate(4deg)
+  left:-10px
 }
 
 .floating-label svg {
-  color:#7b9361
+  color:var(--volt)
 }
 
 .art-spark {
   position:absolute;
-  color:#acba82;
-  font-size:40px;
+  color:var(--volt);
+  font-size:36px;
   top:-4px;
-  left:0
+  left:0;
+  z-index:2
 }
 
 .empty-hint {
-  color:#7c896e;
+  color:var(--muted);
   text-align:center;
   padding:20px;
   font-size:13px
@@ -889,7 +1051,7 @@ footer {
 
 .muted {
   font-size:12px;
-  color:#7f8b76;
+  color:var(--muted);
   line-height:1.7
 }
 
@@ -905,23 +1067,29 @@ footer {
 }
 
 .grocery-category {
-  background:white;
-  border:1px solid #e2e7db;
-  border-radius:11px;
+  background:#fff;
+  border:1px solid var(--ink);
+  border-radius:0;
   padding:20px
 }
 
 .grocery-category h3 {
   display:flex;
   justify-content:space-between;
-  font-size:14px;
-  font-weight:550;
-  padding-bottom:13px
+  font:12px var(--font-mono);
+  font-weight:800;
+  letter-spacing:.6px;
+  padding-bottom:13px;
+  border-bottom:1px solid var(--ink);
+  margin-bottom:6px;
+  text-transform:uppercase
 }
 
 .grocery-category h3 span {
-  color:#8f9b82;
-  font-size:11px
+  color:#fff;
+  background:var(--ink);
+  font:10px var(--font-mono);
+  padding:1px 6px
 }
 
 .grocery-item {
@@ -930,7 +1098,7 @@ footer {
   gap:10px;
   font-size:11px;
   padding:14px 0;
-  border-top:1px solid #edf0e8;
+  border-top:1px solid var(--line);
   cursor:pointer
 }
 
@@ -938,17 +1106,26 @@ footer {
   margin-left:auto;
   white-space:nowrap;
   font-size:10px;
-  font-weight:500;
-  color:#7d8a72
+  font-weight:800;
+  color:var(--ink);
+  text-align:right
+}
+
+.grocery-item strong small {
+  display:block;
+  margin-top:2px;
+  font:9px var(--font-mono);
+  font-weight:400;
+  color:var(--muted)
 }
 
 .grocery-item.done>span {
   text-decoration:line-through;
-  color:#9fa796
+  color:var(--muted)
 }
 
 input[type=checkbox] {
-  accent-color:#426344;
+  accent-color:var(--ink);
   width:17px;
   height:17px;
   cursor:pointer;
@@ -958,36 +1135,39 @@ input[type=checkbox] {
 .footnote {
   font-size:10px;
   line-height:1.8;
-  color:#8a947f;
+  color:var(--muted);
   margin-top:18px
 }
 
 .prep-list {
   display:grid;
-  gap:13px
+  gap:0;
+  border-top:1px solid var(--ink)
 }
 
 .prep-card {
   display:flex;
   align-items:center;
   gap:20px;
-  padding:17px;
+  padding:17px 0;
   background:#fff;
-  border:1px solid #e3e8dc;
-  border-radius:11px
+  border:0;
+  border-bottom:1px solid var(--ink);
+  border-radius:0
 }
 
 .food-art.small {
   width:76px;
   height:76px;
   min-width:76px;
-  border-radius:9px
+  border-radius:0;
+  border:1px solid var(--ink)
 }
 
 .small .plate {
   width:57px;
   height:57px;
-  border-width:4px
+  border-width:1px
 }
 
 .small .plate span {
@@ -1003,32 +1183,40 @@ input[type=checkbox] {
 }
 
 .prep-info h3 {
-  font-size:15px;
-  font-family:Georgia,serif;
-  font-weight:400;
+  font-size:16px;
+  font-family:var(--font-sans);
+  font-weight:800;
   margin:7px 0
 }
 
 .prep-info p {
-  font-size:10px;
-  color:#89937e
+  font:10px var(--font-mono);
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .prep-info .eyebrow {
-  font-size:7px
+  font-size:8px
 }
 
 .prep-check {
-  font-size:9px;
+  font:9px var(--font-mono);
   display:flex;
   align-items:center;
   gap:6px;
-  color:#829172;
-  cursor:pointer
+  color:var(--muted);
+  cursor:pointer;
+  text-transform:uppercase;
+  font-weight:700
 }
 
 .prep-card.complete {
-  background:#f1f5ec
+  background:var(--paper)
+}
+
+.prep-card.complete .prep-info h3 {
+  text-decoration:line-through;
+  color:var(--muted)
 }
 
 .prep-note {
@@ -1038,30 +1226,31 @@ input[type=checkbox] {
 .info-note {
   font-size:10px;
   line-height:1.8;
-  padding:13px;
-  border-radius:7px;
-  background:#f3f5ec;
-  color:#7b886b
+  padding:14px;
+  border-radius:0;
+  background:var(--paper);
+  border:1px solid var(--line);
+  color:var(--muted)
 }
 
 .dialog-body {
-  padding:28px
+  padding:32px
 }
 
 dialog {
-  border:1px solid #e1e6d7;
-  border-radius:16px;
+  border:1px solid var(--ink);
+  border-radius:0;
   width:520px;
   max-width:calc(100% - 30px);
   max-height:90vh;
   padding:0;
-  color:#293f30;
-  box-shadow:0 20px 80px #172d2322
+  color:var(--ink);
+  box-shadow:0 20px 60px #00000030
 }
 
 dialog::backdrop {
-  background:#24342570;
-  backdrop-filter:blur(4px)
+  background:#00000070;
+  backdrop-filter:blur(2px)
 }
 
 .dialog-heading {
@@ -1069,39 +1258,52 @@ dialog::backdrop {
   align-items:center;
   justify-content:space-between;
   gap:15px;
-  margin-bottom:16px
+  margin-bottom:16px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--ink)
 }
 
 .dialog-heading h2 {
-  font-size:26px;
-  font-family:Georgia,serif;
-  font-weight:400;
+  font-size:24px;
+  font-family:var(--font-sans);
+  font-weight:900;
   letter-spacing:-.6px
 }
 
 .icon-button {
   display:grid;
   place-items:center;
-  padding:7px;
-  border-radius:50%;
-  background:#f3f5ed
+  padding:8px;
+  border-radius:0;
+  background:var(--ink);
+  color:var(--volt)
+}
+
+.icon-button:hover {
+  background:#242424
 }
 
 .field {
   display:block;
   margin:20px 0 10px;
-  font-size:12px;
-  font-weight:550
+  font:10px var(--font-mono);
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.6px
 }
 
 .field select,.input-unit {
   margin-top:9px;
   display:flex;
   width:100%;
-  background:white;
-  border:1px solid #dce3d2;
-  border-radius:7px;
+  background:#fff;
+  border:1px solid var(--ink);
+  border-radius:0;
   align-items:center
+}
+
+.input-unit:focus-within {
+  box-shadow:inset 0 0 0 1px var(--ink)
 }
 
 .input-unit input {
@@ -1110,26 +1312,37 @@ dialog::backdrop {
   border:0;
   padding:13px;
   background:transparent;
-  border-radius:7px;
-  color:#344b35
+  border-radius:0;
+  color:var(--ink);
+  font-weight:700;
+  font-size:15px
 }
 
 .input-unit>span {
-  font-size:10px;
-  font-weight:400;
+  font:10px var(--font-mono);
+  font-weight:700;
   padding-right:12px;
-  color:#8d9780
+  color:var(--muted);
+  text-transform:uppercase
 }
 
 .field select {
   padding:13px;
-  color:#536749;
-  font-size:12px
+  color:var(--ink);
+  font-size:12px;
+  font-family:var(--font-sans);
+  text-transform:none;
+  font-weight:500;
+  letter-spacing:0
 }
 
 .field-help {
   font-size:9px;
-  color:#8b967e
+  color:var(--muted);
+  text-transform:none;
+  font-family:var(--font-sans);
+  font-weight:400;
+  letter-spacing:0
 }
 
 .toggle-row {
@@ -1137,24 +1350,33 @@ dialog::backdrop {
   justify-content:space-between;
   align-items:center;
   padding:20px 0;
-  border-bottom:1px solid #e8eddf;
+  border-bottom:1px solid var(--line);
   margin-bottom:20px
 }
 
 .toggle-row strong {
   display:block;
-  font-size:12px
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.4px
 }
 
 .toggle-row small {
   display:block;
   font-size:10px;
-  color:#859176;
+  color:var(--muted);
   margin-top:7px
 }
 
 .dialog-body .info-note {
   margin-top:20px
+}
+
+[role=alert] {
+  color:var(--danger);
+  font-size:12px;
+  margin:10px 0 0;
+  font-weight:600
 }
 
 .recipe-summary {
@@ -1166,17 +1388,21 @@ dialog::backdrop {
 }
 
 .recipe-summary>span:last-child {
-  font-size:10px;
-  color:#8c967f;
+  font:10px var(--font-mono);
+  color:var(--muted);
   display:flex;
   gap:4px;
-  align-items:center
+  align-items:center;
+  text-transform:uppercase
 }
 
 .dialog-body h3 {
-  font-size:14px;
+  font-size:13px;
   margin-top:23px;
-  font-weight:550
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-family:var(--font-mono)
 }
 
 .ingredient-list {
@@ -1191,12 +1417,12 @@ dialog::backdrop {
   gap:15px;
   font-size:12px;
   padding:10px 0;
-  border-bottom:1px solid #edf0e7
+  border-bottom:1px solid var(--line)
 }
 
 .ingredient-list strong {
-  font-weight:500;
-  color:#7e8c6c;
+  font-weight:700;
+  color:var(--ink);
   white-space:nowrap
 }
 
@@ -1204,7 +1430,7 @@ dialog::backdrop {
   padding-left:21px;
   font-size:12px;
   line-height:1.85;
-  color:#738264
+  color:var(--ink)
 }
 
 .steps li {
@@ -1214,8 +1440,9 @@ dialog::backdrop {
 
 .swap-list {
   display:grid;
-  gap:12px;
-  margin-top:22px
+  gap:0;
+  margin-top:22px;
+  border-top:1px solid var(--ink)
 }
 
 .swap-option {
@@ -1223,30 +1450,32 @@ dialog::backdrop {
   align-items:center;
   gap:15px;
   text-align:left;
-  border:1px solid #e3e8da;
-  border-radius:10px;
-  padding:10px
+  border:0;
+  border-bottom:1px solid var(--ink);
+  border-radius:0;
+  padding:14px 4px
 }
 
 .swap-option:disabled {
-  background:#f3f5ee
+  background:var(--paper)
 }
 
 .swap-option:hover:not(:disabled) {
-  border-color:#99ad82
+  background:var(--paper)
 }
 
 .swap-option strong {
   display:block;
   font-size:13px;
-  font-weight:550
+  font-weight:800
 }
 
 .swap-option small {
   display:block;
-  font-size:10px;
-  color:#889879;
-  margin-top:7px
+  font:10px var(--font-mono);
+  color:var(--muted);
+  margin-top:7px;
+  text-transform:uppercase
 }
 
 .swap-option>svg {
@@ -1261,14 +1490,17 @@ dialog::backdrop {
   transform:translate(-50%,20px);
   opacity:0;
   pointer-events:none;
-  background:#294c36;
-  color:white;
-  padding:14px 20px;
-  border-radius:9px;
+  background:var(--ink);
+  color:var(--volt);
+  padding:15px 22px;
+  border-radius:0;
+  border:1px solid var(--volt);
   display:flex;
   align-items:center;
   gap:8px;
-  font-size:12px;
+  font:11px var(--font-mono);
+  font-weight:700;
+  letter-spacing:.3px;
   transition:.2s;
   max-width:calc(100% - 30px);
   z-index:10
@@ -1297,7 +1529,7 @@ dialog::backdrop {
     padding:21px 22px 0
   }
   .page-heading h1 {
-    font-size:42px
+    font-size:46px
   }
 }
 
@@ -1317,14 +1549,14 @@ dialog::backdrop {
     padding:0 25px
   }
   .page-heading h1 {
-    font-size:30px
+    font-size:32px
   }
   .nutrition {
-    gap:14px;
-    padding:18px 13px
+    flex-wrap:wrap
   }
   .nutrition-title {
-    gap:6px
+    gap:6px;
+    padding:16px 13px
   }
   .mini-leaf {
     display:none
@@ -1333,8 +1565,8 @@ dialog::backdrop {
     max-width:110px;
     line-height:1.6
   }
-  .macro.calories {
-    padding-right:14px
+  .macro {
+    padding:16px 13px
   }
   .welcome {
     padding:30px
@@ -1374,29 +1606,30 @@ dialog::backdrop {
     align-items:center;
     gap:15px;
     border-right:0;
-    border-bottom:1px solid #e4e9dc
+    border-bottom:1px solid #000
   }
   .brand {
-    font-size:24px
+    font-size:18px
   }
   .brand-icon {
-    width:30px;
-    height:30px
+    width:28px;
+    height:28px
   }
   .brand-icon svg {
-    width:20px
+    width:18px
   }
   .sidebar-label,.sidebar-bottom {
     display:none
   }
   nav {
     display:flex;
+    flex-wrap:wrap;
     margin-left:auto;
     gap:5px
   }
   .nav-item {
     padding:10px;
-    font-size:11px;
+    font-size:10px;
     gap:7px
   }
   .nav-count {
@@ -1413,7 +1646,9 @@ dialog::backdrop {
     height:48px
   }
   .nutrition-title {
-    flex:1
+    flex:1 0 100%;
+    border-right:0;
+    border-bottom:1px solid #333
   }
   .welcome {
     min-height:430px
@@ -1448,7 +1683,7 @@ dialog::backdrop {
     flex-wrap:wrap
   }
   .brand {
-    font-size:27px
+    font-size:18px
   }
   nav {
     width:100%;
@@ -1458,8 +1693,11 @@ dialog::backdrop {
   .nav-item {
     flex:1;
     justify-content:center;
-    font-size:11px;
+    font-size:10px;
     white-space:nowrap
+  }
+  .measure-match-link {
+    flex-basis:100%
   }
   .topbar {
     padding:0 18px
@@ -1481,7 +1719,7 @@ dialog::backdrop {
     margin-bottom:23px
   }
   .page-heading h1 {
-    font-size:29px
+    font-size:30px
   }
   .page-heading p {
     font-size:11px;
@@ -1523,27 +1761,24 @@ dialog::backdrop {
     margin-top:23px
   }
   .section-heading h2 {
-    font-size:16px
+    font-size:18px
   }
   .days {
-    gap:5px
+    gap:0
   }
   .days button {
-    padding:10px 4px;
+    padding:10px 3px;
     gap:6px;
-    border-radius:7px
+    border-radius:0
   }
   .days span {
-    font-size:9px
+    font-size:8px
   }
   .days strong {
-    font-size:16px
+    font-size:15px
   }
   .nutrition {
-    flex-wrap:wrap;
-    justify-content:space-between;
-    gap:16px;
-    padding:16px
+    flex-wrap:wrap
   }
   .nutrition-title {
     flex-basis:100%
@@ -1555,11 +1790,11 @@ dialog::backdrop {
   .mini-leaf {
     display:grid
   }
+  .macro {
+    flex:1 0 40%
+  }
   .macro strong {
     font-size:18px
-  }
-  .macro.calories {
-    padding-right:12px
   }
   .meal-grid {
     grid-template-columns:1fr;
@@ -1586,7 +1821,7 @@ dialog::backdrop {
     font-size:8px
   }
   .recipe-title {
-    font-size:24px;
+    font-size:22px;
     min-height:0
   }
   .meal-macros {
@@ -1599,7 +1834,7 @@ dialog::backdrop {
     font-size:10px
   }
   .text-button {
-    font-size:12px
+    font-size:11px
   }
   .meal-footer {
     padding:16px 0
@@ -1616,100 +1851,31 @@ dialog::backdrop {
   .welcome {
     grid-template-columns:1fr;
     padding:26px;
-    gap:20px
+    min-height:auto;
+    gap:26px
   }
   .welcome h2 {
-    font-size:43px
+    font-size:34px
   }
   .welcome-art {
-    min-height:260px
+    min-height:220px
   }
   .hero-bowl {
-    width:210px;
-    height:210px;
-    font-size:116px
-  }
-  .floating-label.top {
-    right:0;
-    top:0
-  }
-  .floating-label.bottom {
-    left:0;
-    bottom:0
-  }
-  .welcome-points {
-    font-size:9px;
-    line-height:1.8
+    width:170px;
+    height:170px;
+    font-size:90px
   }
   .grocery-grid {
     grid-template-columns:1fr
   }
-  .section-heading {
+  .prep-card {
     flex-wrap:wrap
   }
-  .section-heading .muted {
-    font-size:11px
-  }
-  .grocery-item {
-    font-size:12px
-  }
-  .grocery-item strong {
-    font-size:11px
-  }
-  .prep-card {
-    flex-wrap:wrap;
-    padding:14px;
-    gap:12px
-  }
-  .prep-info {
-    min-width:170px
-  }
-  .prep-card .secondary {
-    margin-left:88px;
-    padding:9px 12px;
-    font-size:10px
-  }
-  .prep-check {
-    margin-left:auto
-  }
-  .prep-check span {
-    display:none
-  }
-  .prep-info h3 {
-    font-size:16px
-  }
-  .prep-info p {
-    line-height:1.6
+  dialog {
+    width:calc(100% - 20px)
   }
   .dialog-body {
-    padding:23px
-  }
-  .dialog-heading h2 {
-    font-size:24px
-  }
-  .swap-option {
-    gap:10px
-  }
-  .swap-option .small {
-    width:60px;
-    min-width:60px;
-    height:65px
-  }
-  .swap-option strong {
-    font-size:12px
-  }
-  .recipe-summary {
-    align-items:flex-start
-  }
-  .recipe-summary>span:last-child {
-    font-size:9px
-  }
-  .toast {
-    font-size:11px;
-    width:max-content
-  }
-  .welcome .primary {
-    width:100%
+    padding:20px
   }
 }
 
@@ -1717,20 +1883,4 @@ dialog::backdrop {
   * {
     transition:none!important
   }
-}
-
-/* Companion app launcher: Measure/Match's own palette. */
-.nav-item.measure-match-link {
-  background:#c8ff00;
-  color:#090909;
-  font-weight:750;
-  text-decoration:none;
-  white-space:nowrap;
-}
-.nav-item.measure-match-link:hover { background:#b9ed00; }
-@media(max-width:800px) {
-  nav { flex-wrap:wrap; }
-}
-@media(max-width:580px) {
-  .nav-item.measure-match-link { flex-basis:100%; }
 }
