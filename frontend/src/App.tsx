@@ -151,29 +151,35 @@ export default function App() {
           <p className="save-note"><span className={storageError ? 'status-dot error' : 'status-dot'}/>{storageError ? 'Unable to save in this browser' : 'Saved in this browser'}</p>
           <div className="week-line"><strong>{dateAt(plan.start, 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {dateAt(plan.start, 6).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</strong><button className="secondary" onClick={() => setPreferences(true)}><Icon name="swap" size={14}/>Replan</button></div>
           {plan.settings.household && <div className="person-switch" aria-label="View portions for"><button className={person === 'you' ? 'selected' : ''} onClick={() => setPerson('you')} aria-pressed={person === 'you'}>For you</button><button className={person === 'partner' ? 'selected' : ''} onClick={() => setPerson('partner')} aria-pressed={person === 'partner'}>For partner</button></div>}
-          <div className="day-row" aria-label="Choose a day">{plan.days.map((_, index) => <button key={index} className="day-cell" onClick={() => setDay(index)} aria-pressed={day === index}><span>{dateAt(plan.start, index).toLocaleDateString('en-US', { weekday: 'short' })}</span><strong>{day === index ? <span className="today-circle">{dateAt(plan.start, index).getDate()}</span> : dateAt(plan.start, index).getDate()}</strong></button>)}</div>
-          <div className="progress-card">
-            <div className="progress-label"><span>Today’s calories</span><span>{number(nutrition!.calories)} / {number(target)} kcal</span></div>
-            <div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(100, (nutrition!.calories / target) * 100)}%` }}/></div>
-            <div className="macro-row"><span><strong>{number(nutrition!.protein)}g</strong> protein</span><span><strong>{number(nutrition!.carbs)}g</strong> carbs</span><span><strong>{number(nutrition!.fat)}g</strong> fat</span></div>
+          <div className="day-row" aria-label="Choose a day">{plan.days.map((_, index) => <button key={index} className="day-cell" onClick={() => setDay(index)} aria-pressed={day === index}><span className={day === index ? 'today-circle' : ''}>{dateAt(plan.start, index).toLocaleDateString('en-US', { weekday: 'narrow' })}</span><strong className={day === index ? 'accent-num' : ''}>{dateAt(plan.start, index).getDate()}</strong></button>)}</div>
+          <div className="stat-grid">
+            <div className="stat-col"><span className="stat-label">kcal</span><span className="stat-value">{number(nutrition!.calories)}<small> / {number(target)}</small></span><div className="stat-bar"><div style={{ width: `${Math.min(100, (nutrition!.calories / target) * 100)}%` }}/></div></div>
+            <div className="stat-col"><span className="stat-label">Protein</span><span className="stat-value">{number(nutrition!.protein)}<small> g</small></span></div>
+            <div className="stat-col"><span className="stat-label">Carbs</span><span className="stat-value">{number(nutrition!.carbs)}<small> g</small></span></div>
+            <div className="stat-col"><span className="stat-label">Fats</span><span className="stat-value">{number(nutrition!.fat)}<small> g</small></span></div>
           </div>
-          <div className="section-label">Today’s meals</div>
-          {plan.days[day].map((meal, index) => { const recipe = recipeFor(meal); const sched = scheduled?.find(s => s.slot === slots[index]); const isNextUp = Boolean(sched && nextSlot === sched.slot); const show = () => setDetail({ recipe, factor: meal.factor * multiplier, label: person === 'partner' ? 'Partner’s portion' : 'Your portion' }); return <div className={`meal-card ${isNextUp ? 'next' : ''}`} key={`${day}-${index}`}>
-            <button className="meal-tap" onClick={show} aria-label={`View ${recipe.name} recipe`}>
-              <span className="meal-icon">{recipe.emoji}</span>
-              <span className="meal-info">
-                <span className="top-line">
-                  {isNextUp && <span className="next-badge">NEXT UP</span>}
-                  <b>{sched ? formatTime(sched.time) : slots[index]}</b>
+          {plan.days[day].map((meal, index) => { const recipe = recipeFor(meal); const sched = scheduled?.find(s => s.slot === slots[index]); const isNextUp = Boolean(sched && nextSlot === sched.slot); const show = () => setDetail({ recipe, factor: meal.factor * multiplier, label: person === 'partner' ? 'Partner’s portion' : 'Your portion' }); return <div className={`meal-section ${isNextUp ? 'next' : ''}`} key={`${day}-${index}`}>
+            <div className="meal-section-head">
+              <div>
+                <h3>{slots[index]}</h3>
+                <div className="meal-sched-line">
+                  <b>{sched ? formatTime(sched.time) : 'Not scheduled'}</b>
                   {sched?.label && <span>· {sched.label}</span>}
+                  {isNextUp && <span className="next-badge">NEXT UP</span>}
                   {sched && !sched.outsideWakingWindow && sched.date !== dayDate && <span className="date-chip next-day">NEXT DAY</span>}
                   {sched?.outsideWakingWindow && <span className="date-chip next-day">OUTSIDE ROUTINE</span>}
-                </span>
-                <span className="name">{recipe.name}</span>
-              </span>
+                </div>
+              </div>
+              <span className="mini-brand"><span className="brand-mark">F</span>fitprep</span>
+            </div>
+            <p className="meal-section-summary">🔥 {number(kcal(recipe) * meal.factor * multiplier)} kcal • {number(recipe.protein * meal.factor * multiplier)}P | {number(recipe.carbs * meal.factor * multiplier)}C | {number(recipe.fat * meal.factor * multiplier)}F</p>
+            <button className="food-row" onClick={show} aria-label={`View ${recipe.name} recipe`}>
+              <span className="meal-icon">{recipe.emoji}</span>
+              <span className="food-name">{recipe.name}</span>
+              <span className="food-meta"><b>1 serving</b><small>{number(kcal(recipe) * meal.factor * multiplier)} kcal</small></span>
+              <span className="food-radio" aria-hidden="true"/>
             </button>
-            <div className="meal-kcal"><strong>{number(kcal(recipe) * meal.factor * multiplier)}</strong>kcal</div>
-            <button className="swap-btn" onClick={() => setSwapping(index)} aria-label={`Swap ${slots[index].toLowerCase()}`}><Icon name="swap" size={14}/></button>
+            <button className="add-pill" onClick={() => setSwapping(index)} aria-label={`Swap ${slots[index].toLowerCase()}`}><Icon name="swap" size={14}/>Swap this meal</button>
           </div>; })}
           <div className="settings-row"><div><div className="label">Meal Schedule</div><div className="desc">{plan.settings.routine ? `On · wake ${formatTime(plan.settings.routine.wake)}, sleep ${formatTime(plan.settings.routine.sleep)}` : 'Organize meals around your real wake and sleep times, not the clock.'}</div></div><button className="pill-btn outline" onClick={() => setScheduleSetup(true)}>{plan.settings.routine ? 'Edit' : 'Set up'}</button></div>
           <div className="settings-row"><div><div className="label">Grocery list</div><div className="desc">{shopping.length} ingredients, automatically combined.</div></div><button className="pill-btn outline" onClick={() => setTab('groceries')}>Open</button></div>
