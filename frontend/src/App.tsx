@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { batches, dateAt, defaults, eligible, generate, groceries, kcal, monday, parsePlan, quantity, recipeFor, slots, swap, totals } from './planner';
+import { batches, dateAt, defaults, eligible, generate, groceries, kcal, monday, parsePlan, quantity, recipeFor, scheduleDay, setMealTime, setRoutine, slots, swap, totals } from './planner';
 import type { Plan, Recipe, Settings } from './planner';
+import { formatTime, nextUpcoming, validateRoutine } from './schedule';
 import { storeQuantity } from './shopping';
 
 const STORAGE = 'fitprep-plan-v1';
 const number = (n: number) => Math.round(n).toLocaleString();
+const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 function initialPlan() { try { return parsePlan(localStorage.getItem(STORAGE)); } catch { return null; } }
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
@@ -50,6 +52,51 @@ function Preferences({ settings, start, onSubmit, onClose }: { settings: Setting
     <button className="primary full" type="submit">Generate my week <Icon name="arrow"/></button>
   </form></Modal>;
 }
+function ScheduleSetup({ plan, day, onSave, onClose }: { plan: Plan; day: number; onSave: (p: Plan) => void; onClose: () => void }) {
+  const existing = plan.settings.routine;
+  const [wake, setWake] = useState(existing?.wake ?? '07:00');
+  const [sleep, setSleep] = useState(existing?.sleep ?? '23:00');
+  const [meals, setMeals] = useState(() => plan.days[day].map(m => ({ time: m.time, label: m.label ?? '' })));
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  const [error, setError] = useState('');
+  const dayDate = isoDate(dateAt(plan.start, day));
+  const routineErrors = validateRoutine({ wake, sleep });
+  const draft: Plan = { ...plan, settings: { ...plan.settings, routine: routineErrors.length ? null : { wake, sleep } }, days: plan.days.map((meals_, i) => i === day ? meals_.map((m, s) => ({ ...m, time: meals[s].time, label: meals[s].label || undefined })) : meals_) };
+  const scheduled = routineErrors.length ? [] : (scheduleDay(draft, day) ?? []);
+  const flagged = scheduled.filter(m => m.outsideWakingWindow);
+  const canSave = routineErrors.length === 0 && flagged.every(m => confirmed.has(m.slot));
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      let next = setRoutine(plan, { wake, sleep });
+      meals.forEach((m, s) => { next = setMealTime(next, day, s, m.time, m.label || undefined); });
+      onSave(next);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Please review your schedule.'); }
+  };
+  return <Modal title="Plan around your real routine" onClose={onClose}><form onSubmit={submit}>
+    <p className="muted">Built for overnight and shift schedules. Tell us when you wake and sleep, and any meal timed before your wake-up is automatically dated as the next calendar day instead of getting lost.</p>
+    <div className="field-row">
+      <label className="field">Wake time<span className="input-unit"><input type="time" required value={wake} onChange={e => setWake(e.target.value)}/></span></label>
+      <label className="field">Sleep time<span className="input-unit"><input type="time" required value={sleep} onChange={e => setSleep(e.target.value)}/></span></label>
+    </div>
+    {routineErrors.length > 0 && <p role="alert">{routineErrors[0].message}</p>}
+    <p className="field-help">Meal times below are for {dateAt(plan.start, day).toLocaleDateString('en-US', { weekday: 'long' })} only — set each day separately from its day card.</p>
+    {slots.map((slotName, s) => <div className="field-row" key={slotName}>
+      <label className="field">{slotName} time<span className="input-unit"><input type="time" required value={meals[s].time} onChange={e => setMeals(m => m.map((x, i) => i === s ? { ...x, time: e.target.value } : x))}/></span></label>
+      <label className="field">{slotName} label (optional)<span className="input-unit"><input type="text" maxLength={40} placeholder="e.g. Before shift" value={meals[s].label} onChange={e => setMeals(m => m.map((x, i) => i === s ? { ...x, label: e.target.value } : x))}/></span></label>
+    </div>)}
+    {flagged.length > 0 && <div className="confirm-box">
+      <strong>These meals fall outside your waking hours</strong>
+      <p>Nothing was moved automatically — confirm each one below, or change its time above.</p>
+      {flagged.map(m => <label key={m.slot}><input type="checkbox" checked={confirmed.has(m.slot)} onChange={e => setConfirmed(c => { const next = new Set(c); if (e.target.checked) next.add(m.slot); else next.delete(m.slot); return next; })}/><span>Keep {m.slot} at {formatTime(m.time)}{m.date !== dayDate ? ', next day' : ''}</span></label>)}
+    </div>}
+    {error && <p role="alert">{error}</p>}
+    <div className="schedule-actions">
+      {existing && <button type="button" className="secondary" onClick={() => onSave(setRoutine(plan, null))}>Turn off</button>}
+      <button className="primary" type="submit" disabled={!canSave}>Save schedule <Icon name="arrow"/></button>
+    </div>
+  </form></Modal>;
+}
 function FoodArt({ recipe, small = false }: { recipe: Recipe; small?: boolean }) {
   return <div className={`food-art ${recipe.color} ${small ? 'small' : ''}`} aria-hidden="true"><div className="food-orbit"/><div className="plate"><span>{recipe.emoji}</span></div><span className="food-sprig">✳</span></div>;
 }
@@ -59,6 +106,7 @@ export default function App() {
   const [day, setDay] = useState(0);
   const [person, setPerson] = useState('you');
   const [preferences, setPreferences] = useState(false);
+  const [scheduleSetup, setScheduleSetup] = useState(false);
   const [swapping, setSwapping] = useState<number | null>(null);
   const [detail, setDetail] = useState<{ recipe: Recipe; factor: number; label: string } | null>(null);
   const [notice, setNotice] = useState('');
@@ -69,6 +117,17 @@ export default function App() {
   const prep = plan ? batches(plan) : [];
   const multiplier = plan?.settings.household && person === 'partner' ? plan.settings.partnerCalories / plan.settings.calories : 1;
   const nutrition = plan ? totals(plan.days[day], multiplier) : null;
+  const scheduled = plan?.settings.routine ? scheduleDay(plan, day) : null;
+  const dayDate = plan ? isoDate(dateAt(plan.start, day)) : '';
+  const nextSlot = (() => {
+    if (!scheduled || !plan?.settings.routine || dayDate !== isoDate(new Date())) return null;
+    const [wh, wm] = plan.settings.routine.wake.split(':').map(Number);
+    const wakeMinutes = wh * 60 + wm;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowSinceWake = currentMinutes >= wakeMinutes ? currentMinutes - wakeMinutes : 24 * 60 - wakeMinutes + currentMinutes;
+    return nextUpcoming(scheduled, nowSinceWake)?.slot ?? null;
+  })();
   const setNewPlan = (settings: Settings, start: string) => { setPlan(generate(settings, plan ? plan.generation + 1 : 0, start)); setPreferences(false); setDay(0); setPerson('you'); setTab('plan'); setNotice('Your week is ready. Let’s make it a good one.'); };
   const toggle = (key: 'checked' | 'prepped', id: string) => setPlan(p => p ? { ...p, [key]: p[key].includes(id) ? p[key].filter(v => v !== id) : [...p[key], id] } : p);
   const exportList = () => {
@@ -88,7 +147,8 @@ export default function App() {
       {tab === 'plan' && <><div className="section-heading"><h2>On the menu</h2><div className="person-switch" aria-label="View portions for"><button className={person === 'you' ? 'selected' : ''} onClick={() => setPerson('you')} aria-pressed={person === 'you'}>For you</button>{plan.settings.household && <button className={person === 'partner' ? 'selected' : ''} onClick={() => setPerson('partner')} aria-pressed={person === 'partner'}>For partner</button>}</div></div>
       <div className="days" aria-label="Choose a day">{plan.days.map((_, index) => <button key={index} className={day === index ? 'selected' : ''} onClick={() => setDay(index)} aria-pressed={day === index}><span>{dateAt(plan.start, index).toLocaleDateString('en-US', { weekday: 'short' })}</span><strong>{dateAt(plan.start, index).getDate()}</strong><i/></button>)}</div>
       <div className="nutrition"><div className="nutrition-title"><span className="mini-leaf"><Icon name="leaf"/></span><div><strong>Your day at a glance</strong><small>Estimated nutrition · {person === 'partner' ? 'partner’s' : 'your'} portions</small></div></div><div className="macro calories"><strong>{number(nutrition!.calories)}<small> kcal</small></strong><span>{number(plan.settings.calories * multiplier)} daily target</span></div>{(['protein', 'carbs', 'fat'] as const).map(m => <div className={`macro ${m}`} key={m}><strong>{number(nutrition![m])}<small> g</small></strong><span><i/>{m === 'fat' ? 'Fats' : m.charAt(0).toUpperCase() + m.slice(1)}</span></div>)}</div>
-      <div className="meal-grid">{plan.days[day].map((meal, index) => { const recipe = recipeFor(meal); const show = () => setDetail({ recipe, factor: meal.factor * multiplier, label: person === 'partner' ? 'Partner’s portion' : 'Your portion' }); return <article className="meal-card" key={`${day}-${index}`}><button className="art-button" aria-label={`View ${recipe.name} recipe`} onClick={show}><FoodArt recipe={recipe}/><span className="time-tag"><Icon name="clock" size={13}/>{recipe.minutes} min</span></button><div className="meal-content"><div className="meal-label">{slots[index]}<span>{recipe.vegetarian ? 'Vegetarian' : 'Batch friendly'}</span></div><button className="recipe-title" onClick={show}>{recipe.name}</button><div className="meal-macros"><strong>{number(kcal(recipe) * meal.factor * multiplier)} kcal</strong><span>{number(recipe.protein * meal.factor * multiplier)}g protein</span></div><div className="meal-footer"><span>1 personalized portion</span><button className="text-button" onClick={() => setSwapping(index)} aria-label={`Swap ${slots[index].toLowerCase()}`}><Icon name="swap" size={15}/>Swap</button></div></div></article>; })}</div>
+      <div className="meal-grid">{plan.days[day].map((meal, index) => { const recipe = recipeFor(meal); const sched = scheduled?.find(s => s.slot === slots[index]); const isNextUp = Boolean(sched && nextSlot === sched.slot); const show = () => setDetail({ recipe, factor: meal.factor * multiplier, label: person === 'partner' ? 'Partner’s portion' : 'Your portion' }); return <article className="meal-card" key={`${day}-${index}`}><button className="art-button" aria-label={`View ${recipe.name} recipe`} onClick={show}><FoodArt recipe={recipe}/><span className="time-tag"><Icon name="clock" size={13}/>{recipe.minutes} min</span></button><div className="meal-content"><div className="meal-label"><span className="meal-label-time">{sched ? formatTime(sched.time) : slots[index]}{sched?.outsideWakingWindow && <span className="schedule-tag warn">Outside routine</span>}{sched && !sched.outsideWakingWindow && sched.date !== dayDate && <span className="schedule-tag">Next day</span>}{isNextUp && <span className="schedule-tag next">Next up</span>}</span><span>{recipe.vegetarian ? 'Vegetarian' : 'Batch friendly'}</span></div>{sched?.label && <p className="meal-custom-label">{sched.label}</p>}<button className="recipe-title" onClick={show}>{recipe.name}</button><div className="meal-macros"><strong>{number(kcal(recipe) * meal.factor * multiplier)} kcal</strong><span>{number(recipe.protein * meal.factor * multiplier)}g protein</span></div><div className="meal-footer"><span>1 personalized portion</span><button className="text-button" onClick={() => setSwapping(index)} aria-label={`Swap ${slots[index].toLowerCase()}`}><Icon name="swap" size={15}/>Swap</button></div></div></article>; })}</div>
+      <div className="toggle-row"><span><strong>Meal Schedule</strong><small>{plan.settings.routine ? `On · wake ${formatTime(plan.settings.routine.wake)}, sleep ${formatTime(plan.settings.routine.sleep)}` : 'Organize meals around your real wake and sleep times, not the clock.'}</small></span><button className="secondary" onClick={() => setScheduleSetup(true)}><Icon name="clock" size={17}/>{plan.settings.routine ? 'Edit' : 'Set up'}</button></div>
       <div className="bottom-callouts"><button onClick={() => setTab('groceries')}><span className="callout-icon"><Icon name="bag"/></span><span><strong>Your grocery list is ready</strong><small>{shopping.length} ingredients, automatically combined.</small></span><Icon name="arrow"/></button><button onClick={() => setTab('prep')}><span className="callout-icon peach"><Icon name="chef"/></span><span><strong>Meet your prep game plan</strong><small>{prep.length} recipes to organize your week.</small></span><Icon name="arrow"/></button></div></>}
       {tab === 'groceries' && <section><div className="section-heading"><div><h2>Let’s stock the kitchen</h2><p className="muted">{shopping.filter(i => plan.checked.includes(i.name)).length} of {shopping.length} items checked · quantities for the whole household</p></div><button className="secondary" onClick={exportList}><Icon name="download" size={18}/>Download list</button></div><div className="grocery-grid">{[...new Set(shopping.map(i => i.category))].map(category => <section className="grocery-category" key={category}><h3>{category}<span>{shopping.filter(i => i.category === category).length}</span></h3>{shopping.filter(i => i.category === category).map(item => <label className={`grocery-item ${plan.checked.includes(item.name) ? 'done' : ''}`} key={item.name}><input type="checkbox" checked={plan.checked.includes(item.name)} onChange={() => toggle('checked', item.name)}/><span>{item.name}</span><Amount name={item.name} grams={item.grams}/></label>)}</section>)}</div><p className="footnote">Amounts are rounded up to what you’d actually buy, using typical US package sizes — check your store’s. The smaller line is the exact amount the plan needs. Dry grains, drained beans, and raw proteins are weighed in that state. Seasonings and water are pantry extras.</p></section>}
       {tab === 'prep' && <section><div className="section-heading"><div><h2>A little prep goes a long way</h2><p className="muted">{prep.filter(b => plan.prepped.includes(b.recipe.id)).length} of {prep.length} recipes prepared</p></div><span className="pill">COOK · PORTION · ENJOY</span></div><div className="info-note prep-note">These are whole-week batch totals. Split cooking across the week or freeze later portions; don’t keep a full week of cooked food in the fridge. Assemble toast and fresh toppings at serving time.</div><div className="prep-list">{prep.map(batch => <article className={`prep-card ${plan.prepped.includes(batch.recipe.id) ? 'complete' : ''}`} key={batch.recipe.id}><FoodArt recipe={batch.recipe} small/><div className="prep-info"><span className="eyebrow">{batch.recipe.slot} · {batch.portions} PORTIONS</span><h3>{batch.recipe.name}</h3><p>{batch.days.map(d => dateAt(plan.start, d).toLocaleDateString('en-US', { weekday: 'short' })).join(', ')}</p></div><button className="secondary" onClick={() => setDetail({ recipe: batch.recipe, factor: batch.factor, label: `Whole-week batch · ${batch.portions} portions` })}>Batch recipe</button><label className="prep-check"><input aria-label={`Mark ${batch.recipe.name} prepared`} type="checkbox" checked={plan.prepped.includes(batch.recipe.id)} onChange={() => toggle('prepped', batch.recipe.id)}/><span>Prepared</span></label></article>)}</div></section>}
@@ -97,6 +157,7 @@ export default function App() {
     <footer><span className="footer-brand"><Icon name="leaf" size={15}/>Good food. Made doable.</span><span>Built around your week.</span></footer>
     </main></div>
     {preferences && <Preferences settings={plan?.settings ?? defaults} start={plan?.start ?? monday()} onSubmit={setNewPlan} onClose={() => setPreferences(false)}/>}
+    {scheduleSetup && plan && <ScheduleSetup plan={plan} day={day} onSave={p => { setPlan(p); setScheduleSetup(false); setNotice(p.settings.routine ? 'Meal Schedule saved.' : 'Meal Schedule turned off.'); }} onClose={() => setScheduleSetup(false)}/>}
     {swapping !== null && plan && <Modal title={`A fresh take on ${slots[swapping].toLowerCase()}`} onClose={() => setSwapping(null)}><p className="muted">Swap this meal for {dateAt(plan.start, day).toLocaleDateString('en-US', { weekday: 'long' })}. Portions adjust to your target.</p><div className="swap-list">{eligible(slots[swapping], plan.settings).map(recipe => { const current = plan.days[day][swapping].recipeId === recipe.id; return <button className="swap-option" key={recipe.id} disabled={current} onClick={() => { setPlan(swap(plan, day, swapping, recipe.id)); setSwapping(null); setNotice('Meal swapped. Unchanged progress kept; review unchecked groceries and prep.'); }}><FoodArt recipe={recipe} small/><span><strong>{recipe.name}</strong><small>{recipe.minutes} min · {current ? 'Currently planned' : 'Choose this meal'}</small></span>{current ? <Icon name="check"/> : <Icon name="arrow"/>}</button>; })}</div></Modal>}
     {detail && <Modal title={detail.recipe.name} onClose={() => setDetail(null)}><div className="recipe-summary"><span className="pill">{detail.label}</span><span><Icon name="clock" size={16}/>{detail.recipe.minutes} min per recipe</span></div><p className="muted">{number(kcal(detail.recipe) * detail.factor)} kcal · {number(detail.recipe.protein * detail.factor)}g protein · {number(detail.recipe.carbs * detail.factor)}g carbs · {number(detail.recipe.fat * detail.factor)}g fats</p><h3>What you’ll need</h3><ul className="ingredient-list">{detail.recipe.ingredients.map(item => <li key={item.name}><span>{item.name}</span><strong>{quantity(item.grams * detail.factor)}</strong></li>)}</ul><h3>Let’s make it</h3><ol className="steps">{detail.recipe.steps.map(step => <li key={step}>{step}</li>)}</ol><p className="footnote">Estimated nutrition. Larger batches may take longer. Portion weights include the ingredient state shown above.</p></Modal>}
     <div className={`toast ${notice ? 'visible' : ''}`} role="status">{notice && <><Icon name="check" size={18}/>{notice}</>}</div>
