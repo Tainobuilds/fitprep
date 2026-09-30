@@ -344,7 +344,7 @@ function SetupStage({
   const windowHrs = routineErrors.length ? null : (wakingWindowMinutes(routine) / 60).toFixed(1);
 
   return (
-    <div className="dark-stage">
+    <div>
       <div className="stage-header">
         <div className="stage-eyebrow">Meal Plan &amp; Foods</div>
         <h1 className="stage-title">Meal Schedule</h1>
@@ -487,7 +487,7 @@ function PreviewStage({
   );
 
   return (
-    <div className="dark-stage">
+    <div>
       <div className="stage-header">
         <div className="stage-eyebrow">Step 2 of 2</div>
         <h1 className="stage-title">Review your schedule</h1>
