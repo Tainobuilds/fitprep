@@ -202,9 +202,9 @@ function PlannerView({
     <div>
       <div className="day-row" aria-label="Choose a day">
         {weekAround(startDate).map(({ label, date, isToday }) => (
-          <div key={date} className={`day-cell ${isToday ? "today" : ""}`}>
+          <div key={date} className="day-cell">
             {label}
-            <strong>{Number(date.slice(-2))}</strong>
+            <strong className={isToday ? "today-circle" : ""}>{Number(date.slice(-2))}</strong>
           </div>
         ))}
       </div>
@@ -247,8 +247,11 @@ function PlannerView({
         ? grouped.map(([date, dayMeals]) => (
             <div key={date}>
               <div className="section-label">
-                {formatDate(date)}
-                {date !== startDate && <span className="date-chip next-day">NEXT DAY</span>}
+                <span>
+                  {formatDate(date)}
+                  {date !== startDate && <span className="date-chip next-day" style={{ marginLeft: 8 }}>NEXT DAY</span>}
+                </span>
+                <span className="mini-brand">fitia</span>
               </div>
               {dayMeals.map((m) => (
                 <MealRow key={m.id} meal={m} isNext={upcoming?.id === m.id} showDate={false} />
@@ -260,7 +263,10 @@ function PlannerView({
             if (!meal) return null;
             return (
               <div key={slot}>
-                <div className="section-label">{slot}</div>
+                <div className="section-label">
+                  <span>{slot}</span>
+                  <span className="mini-brand">fitia</span>
+                </div>
                 <MealRow meal={meal} isNext={false} showDate={false} />
               </div>
             );

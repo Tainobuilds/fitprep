@@ -168,12 +168,18 @@ main {
   margin-top: 4px;
 }
 
-.day-cell.today {
-  background: #fff3cc;
-}
-
-.day-cell.today strong {
-  color: #8a6a00;
+/* Real app's "today" indicator is a filled black circle around the date
+   number, not a tinted cell background -- confirmed from a real screenshot
+   of the live Plan screen (M T W [T-in-black-circle] F S S). */
+.today-circle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  background: #000;
+  color: #fff !important;
 }
 
 .progress-card {
@@ -213,7 +219,18 @@ main {
   margin: 22px 0 10px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+
+/* Real meal cards on the live Plan screen carry a small "fitia" wordmark
+   in the corner of each section -- confirmed from a real screenshot. */
+.mini-brand {
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  text-transform: none;
 }
 
 .next-badge {
