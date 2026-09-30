@@ -1,0 +1,522 @@
+/* ============================================================
+   Visual language recreated from Fitia's real, live site
+   (fitia.app), not guessed from memory or from the PRD's
+   assumed dark theme:
+   - Primary action yellow #FFC300, fully pill-shaped buttons,
+     and the Inter font -- read directly off fitia.app's own
+     "Get Started" button via getComputedStyle().
+   - Light cards, black bold headlines, gray secondary text,
+     a green progress bar, rounded meal cards -- observed
+     directly from fitia.app's own "Weekly Meal Plans" phone
+     screenshot on their live homepage.
+   The one color NOT independently confirmed: the exact green
+   hex for the progress bar (a same-origin image read blocked
+   pixel sampling) -- a plausible standard green is used and
+   flagged here rather than presented as verified.
+   ============================================================ */
+:root {
+  --yellow: #ffc300;
+  --ink: #111111;
+  --muted: #6b7280;
+  --muted-light: #9ca3af;
+  --paper: #fffaf0;
+  --card: #ffffff;
+  --border: #e9e5da;
+  --green: #22c55e; /* plausible, not pixel-confirmed -- see note above */
+  --danger: #dc2626;
+  --font: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+button, input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--card);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.disclaimer {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--muted-light);
+  text-align: center;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--yellow);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pill-btn {
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pill-btn.yellow {
+  background: var(--yellow);
+  color: #1a1400;
+}
+
+.pill-btn.yellow:hover {
+  background: #ffcf33;
+}
+
+.pill-btn.outline {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+}
+
+.pill-btn.outline:hover {
+  background: #f7f5ef;
+}
+
+.pill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pill-btn.full {
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  padding: 14px 18px;
+  font-size: 14px;
+}
+
+main {
+  padding: 20px;
+  flex: 1;
+}
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.day-cell {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.day-cell strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
+/* Real app's "today" indicator is a filled black circle around the date
+   number, not a tinted cell background -- confirmed from a real screenshot
+   of the live Plan screen (M T W [T-in-black-circle] F S S). */
+.today-circle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  background: #000;
+  color: #fff !important;
+}
+
+.progress-card {
+  background: #f6f5ef;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e2d6;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 999px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 22px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Real meal cards on the live Plan screen carry a small "fitia" wordmark
+   in the corner of each section -- confirmed from a real screenshot. */
+.mini-brand {
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  text-transform: none;
+}
+
+.next-badge {
+  background: var(--ink);
+  color: var(--yellow);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+
+.meal-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.meal-card.next {
+  border-color: var(--yellow);
+  background: #fffdf3;
+}
+
+.meal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f6f5ef;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.meal-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-info .top-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.meal-info .top-line b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.meal-info .name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.date-chip {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.date-chip.next-day {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.meal-kcal {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.meal-kcal strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.settings-row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-row .label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-row .desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.field input[type="time"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.field input[type="time"]:focus {
+  outline: none;
+  border-color: var(--yellow);
+}
+
+.field.invalid input {
+  border-color: var(--danger);
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.meal-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.meal-time-row .meal-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.meal-time-row .name-col {
+  flex: 1;
+}
+
+.meal-time-row .name-col .name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.meal-time-row .name-col input {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.meal-time-row input[type="time"] {
+  width: 108px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.info-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  background: #f6f5ef;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 16px 0;
+}
+
+.confirm-box {
+  background: #fff8e6;
+  border: 1px solid #ffe08a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.confirm-box label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.confirm-box input {
+  margin-top: 2px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.actions-row .pill-btn {
+  flex: 1;
+}
+
+.stage-header {
+  margin-bottom: 4px;
+}
+
+.stage-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.stage-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 6px 0 16px;
+}
+
+.preview-group {
+  margin-bottom: 18px;
+}
+
+.preview-date-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 520px) {
+  .app {
+    box-shadow: none;
+  }
+}
+
