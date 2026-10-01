@@ -110,6 +110,13 @@ export function setMealTime(plan: Plan, day: number, slot: number, time: string,
     return updated;
   })) };
 }
+/** Copies the editor's times and labels to the chosen days, including explicit label clearing. */
+export function applyMealSchedule(plan: Plan, days: number[], meals: { time: string; label: string }[]): Plan {
+  if (!days.length) throw new Error('Choose at least one day.');
+  if (meals.length !== slots.length) throw new Error('Enter a time for every meal.');
+  return days.reduce((next, day) => meals.reduce((updated, meal, slot) =>
+    setMealTime(updated, day, slot, meal.time, meal.label), next), plan);
+}
 /** Turns Meal Schedule on/off (or updates the routine) without regenerating the week --
  * meals and their times/labels are untouched, so nothing else resets. */
 export function setRoutine(plan: Plan, routine: Routine | null): Plan {

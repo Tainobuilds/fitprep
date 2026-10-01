@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { batches, defaults, generate, groceries, monday, parsePlan, recipeFor, scheduleDay, setMealTime, setRoutine, swap, totals } from '../src/planner.ts';
+import { applyMealSchedule, batches, defaults, generate, groceries, monday, parsePlan, recipeFor, scheduleDay, setMealTime, setRoutine, swap, totals } from '../src/planner.ts';
 
 const near = (a, b) => assert.ok(Math.abs(a - b) < 0.00001, `${a} should equal ${b}`);
 test('all seven days hit the chosen calorie target, including the partner', () => {
@@ -175,4 +175,29 @@ test('swapping a recipe preserves a custom meal time/label instead of resetting 
   assert.equal(swapped.days[0][1].recipeId, 'tofu-bowl');
   assert.equal(swapped.days[0][1].time, '14:30');
   assert.equal(swapped.days[0][1].label, 'Late lunch');
+});
+
+
+test('schedule saves clear old labels only on chosen days and preserve recipes, portions and progress', () => {
+  let original = generate(defaults, 0, '2026-09-28');
+  for (let day = 0; day < 7; day++) original = setMealTime(original, day, 0, '08:00', 'Old label');
+  original = { ...original, checked: ['Eggs'], prepped: [original.days[0][0].recipeId] };
+  const snapshot = JSON.stringify(original);
+  const meals = [{ time: '20:00', label: '' }, { time: '01:00', label: 'Work break' }, { time: '09:00', label: 'After work' }];
+  for (const days of [[0], [1, 3, 5], [0, 1, 2, 3, 4, 5, 6]]) {
+    const updated = applyMealSchedule(original, days, meals);
+    updated.days.forEach((dayMeals, day) => {
+      if (!days.includes(day)) return assert.deepEqual(dayMeals, original.days[day]);
+      dayMeals.forEach((meal, slot) => {
+        assert.deepEqual(meal, { ...original.days[day][slot], ...meals[slot] });
+      });
+    });
+    assert.deepEqual(updated.checked, original.checked);
+    assert.deepEqual(updated.prepped, original.prepped);
+    assert.deepEqual(updated.settings, original.settings);
+    const restored = parsePlan(JSON.stringify(updated));
+    for (const day of days) assert.ok(!restored.days[day][0].label);
+  }
+  assert.equal(JSON.stringify(original), snapshot);
+  assert.throws(() => applyMealSchedule(original, [], meals), /at least one day/);
 });

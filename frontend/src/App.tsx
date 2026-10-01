@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { batches, dateAt, defaults, eligible, generate, groceries, kcal, monday, parsePlan, quantity, recipeFor, scheduleDay, setMealTime, setRoutine, slots, swap, totals } from './planner';
+import { applyMealSchedule, batches, dateAt, defaults, eligible, generate, groceries, kcal, monday, parsePlan, quantity, recipeFor, scheduleDay, setRoutine, slots, swap, totals } from './planner';
 import type { Plan, Recipe, Settings } from './planner';
 import { formatTime, nextUpcoming, validateRoutine } from './schedule';
 import { storeQuantity } from './shopping';
@@ -57,30 +57,44 @@ function ScheduleSetup({ plan, day, onSave, onClose }: { plan: Plan; day: number
   const [wake, setWake] = useState(existing?.wake ?? '07:00');
   const [sleep, setSleep] = useState(existing?.sleep ?? '23:00');
   const [meals, setMeals] = useState(() => plan.days[day].map(m => ({ time: m.time, label: m.label ?? '' })));
+  const [scope, setScope] = useState<'day' | 'week' | 'selected'>('day');
+  const [selectedDays, setSelectedDays] = useState<number[]>([day]);
+  const targetDays = scope === 'week' ? plan.days.map((_, i) => i) : scope === 'day' ? [day] : selectedDays;
+  const dayName = (i: number) => dateAt(plan.start, i).toLocaleDateString('en-US', { weekday: 'short' });
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  useEffect(() => { setConfirmed(new Set()); }, [wake, sleep, meals, scope, selectedDays]);
   const [error, setError] = useState('');
   const dayDate = isoDate(dateAt(plan.start, day));
   const routineErrors = validateRoutine({ wake, sleep });
   const draft: Plan = { ...plan, settings: { ...plan.settings, routine: routineErrors.length ? null : { wake, sleep } }, days: plan.days.map((meals_, i) => i === day ? meals_.map((m, s) => ({ ...m, time: meals[s].time, label: meals[s].label || undefined })) : meals_) };
   const scheduled = routineErrors.length ? [] : (scheduleDay(draft, day) ?? []);
   const flagged = scheduled.filter(m => m.outsideWakingWindow);
-  const canSave = routineErrors.length === 0 && flagged.every(m => confirmed.has(m.slot));
+  const canSave = targetDays.length > 0 && routineErrors.length === 0 && flagged.every(m => confirmed.has(m.slot));
   const submit = (e: FormEvent) => {
     e.preventDefault();
     try {
-      let next = setRoutine(plan, { wake, sleep });
-      meals.forEach((m, s) => { next = setMealTime(next, day, s, m.time, m.label || undefined); });
+      if (!canSave) return;
+      const next = applyMealSchedule(setRoutine(plan, { wake, sleep }), targetDays, meals);
       onSave(next);
     } catch (err) { setError(err instanceof Error ? err.message : 'Please review your schedule.'); }
   };
   return <Modal title="Plan around your real routine" onClose={onClose}><form onSubmit={submit}>
-    <p className="muted">Built for overnight and shift schedules. Tell us when you wake and sleep, and any meal timed before your wake-up is automatically dated as the next calendar day instead of getting lost.</p>
+    <p className="muted">Set your meal times once, then choose the days they fit. Meals after midnight stay part of your waking day.</p>
     <div className="field-row">
       <label className="field">Wake time<span className="input-unit"><input type="time" required value={wake} onChange={e => setWake(e.target.value)}/></span></label>
       <label className="field">Sleep time<span className="input-unit"><input type="time" required value={sleep} onChange={e => setSleep(e.target.value)}/></span></label>
     </div>
+    <p className="field-help">Wake and sleep times apply to the whole week.</p>
     {routineErrors.length > 0 && <p role="alert">{routineErrors[0].message}</p>}
-    <p className="field-help">Meal times below are for {dateAt(plan.start, day).toLocaleDateString('en-US', { weekday: 'long' })} only — set each day separately from its day card.</p>
+    <fieldset className="schedule-scope">
+      <legend>Apply these meal times and labels to</legend>
+      <div className="scope-options">
+        {([['day', `Only ${dayName(day)}`], ['week', 'Whole week'], ['selected', 'Choose days']] as const).map(([value, label]) => <label key={value} className={scope === value ? 'active' : ''}><input type="radio" name="schedule-scope" value={value} checked={scope === value} onChange={() => setScope(value)}/>{label}</label>)}
+      </div>
+      {scope === 'selected' && <div className="schedule-days" aria-label="Days to update">{plan.days.map((_, i) => <button type="button" key={i} aria-pressed={selectedDays.includes(i)} onClick={() => setSelectedDays(days => days.includes(i) ? days.filter(d => d !== i) : [...days, i].sort())}>{dayName(i)}<small>{dateAt(plan.start, i).getDate()}</small></button>)}</div>}
+      <p className="scope-summary" aria-live="polite">{targetDays.length ? `Meal times and labels will be saved for ${scope === 'week' ? 'all 7 days' : targetDays.map(dayName).join(', ')}. You can adjust any day later.` : 'Choose at least one day to continue.'}</p>
+      {targetDays.length > 1 && <p className="field-help">This replaces existing meal times and labels on those days.</p>}
+    </fieldset>
     {slots.map((slotName, s) => <div className="field-row" key={slotName}>
       <label className="field">{slotName} time<span className="input-unit"><input type="time" required value={meals[s].time} onChange={e => setMeals(m => m.map((x, i) => i === s ? { ...x, time: e.target.value } : x))}/></span></label>
       <label className="field">{slotName} label (optional)<span className="input-unit"><input type="text" maxLength={40} placeholder="e.g. Before shift" value={meals[s].label} onChange={e => setMeals(m => m.map((x, i) => i === s ? { ...x, label: e.target.value } : x))}/></span></label>
@@ -93,7 +107,7 @@ function ScheduleSetup({ plan, day, onSave, onClose }: { plan: Plan; day: number
     {error && <p role="alert">{error}</p>}
     <div className="schedule-actions">
       {existing && <button type="button" className="secondary" onClick={() => onSave(setRoutine(plan, null))}>Turn off</button>}
-      <button className="primary" type="submit" disabled={!canSave}>Save schedule <Icon name="arrow"/></button>
+      <button className="primary" type="submit" disabled={!canSave}>Save {targetDays.length === 1 ? dayName(targetDays[0]) : `${targetDays.length} days`} <Icon name="arrow"/></button>
     </div>
   </form></Modal>;
 }
