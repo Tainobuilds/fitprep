@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { batches, defaults, generate, groceries, monday, parsePlan, recipeFor, swap, totals } from '../src/planner.ts';
+import { applyMealSchedule, batches, defaults, generate, groceries, monday, parsePlan, recipeFor, scheduleDay, setMealTime, setRoutine, swap, totals } from '../src/planner.ts';
 
 const near = (a, b) => assert.ok(Math.abs(a - b) < 0.00001, `${a} should equal ${b}`);
 test('all seven days hit the chosen calorie target, including the partner', () => {
@@ -116,4 +116,88 @@ test('a selected future week survives persistence and replanning', () => {
   const next = generate(saved.settings, saved.generation + 1, saved.start);
   assert.equal(next.start, '2026-09-28');
   assert.notDeepEqual(next.days, p.days);
+});
+test('a plan saved before Meal Schedule existed still loads unchanged (seamless when off)', () => {
+  // Simulates real pre-feature saved JSON: no `routine` on settings, no `time`/`label` on meals.
+  const p = generate(defaults);
+  const old = JSON.parse(JSON.stringify(p));
+  delete old.settings.routine;
+  for (const day of old.days) for (const meal of day) { delete meal.time; delete meal.label; }
+  const restored = parsePlan(JSON.stringify(old));
+  assert.ok(restored, 'an old-format plan must still load');
+  assert.equal(restored.settings.routine, null);
+  assert.deepEqual(restored.days[0][0].time, '08:00');
+  assert.deepEqual(restored.days[0][1].time, '13:00');
+  assert.deepEqual(restored.days[0][2].time, '19:00');
+});
+test('scheduleDay is null until a routine is set, and computed correctly once it is', () => {
+  const p = generate(defaults, 0, '2026-09-29');
+  assert.equal(scheduleDay(p, 0), null);
+  // The PRD's own acceptance scenario: wake 3pm, sleep 8am next day.
+  let scheduled = setRoutine(p, { wake: '15:00', sleep: '08:00' });
+  scheduled = setMealTime(scheduled, 0, 0, '17:00', 'Before work');   // breakfast slot, retimed
+  scheduled = setMealTime(scheduled, 0, 1, '23:00', 'Dinner break');  // lunch slot, retimed
+  scheduled = setMealTime(scheduled, 0, 2, '04:00', 'Before bed');    // dinner slot, retimed -> next day
+  const day = scheduleDay(scheduled, 0);
+  assert.equal(day.length, 3);
+  assert.equal(day[0].time, '17:00'); assert.equal(day[0].date, '2026-09-29');
+  assert.equal(day[1].time, '23:00'); assert.equal(day[1].date, '2026-09-29');
+  assert.equal(day[2].time, '04:00'); assert.equal(day[2].date, '2026-09-30');
+  assert.equal(day[2].label, 'Before bed');
+});
+test('setRoutine validates and rejects equal wake/sleep, and does not touch days or progress', () => {
+  const p = generate(defaults);
+  p.checked = ['Rolled oats, dry']; p.prepped = ['berry-oats'];
+  assert.throws(() => setRoutine(p, { wake: '07:00', sleep: '07:00' }));
+  const on = setRoutine(p, { wake: '07:00', sleep: '23:00' });
+  assert.deepEqual(on.days, p.days);
+  assert.deepEqual(on.checked, p.checked);
+  assert.deepEqual(on.prepped, p.prepped);
+  const off = setRoutine(on, null);
+  assert.equal(off.settings.routine, null);
+  assert.deepEqual(off.days, p.days);
+});
+test('setMealTime validates the time and preserves an existing label when none is passed', () => {
+  const p = generate(defaults);
+  assert.throws(() => setMealTime(p, 0, 0, 'not-a-time'));
+  assert.throws(() => setMealTime(p, 9, 0, '08:00'));
+  const labeled = setMealTime(p, 0, 0, '06:30', 'Early shift');
+  assert.equal(labeled.days[0][0].label, 'Early shift');
+  const retimedOnly = setMealTime(labeled, 0, 0, '06:45');
+  assert.equal(retimedOnly.days[0][0].time, '06:45');
+  assert.equal(retimedOnly.days[0][0].label, 'Early shift', 'changing only the time must not clear the label');
+  // Unrelated meals and progress are untouched.
+  assert.deepEqual(retimedOnly.days[0][1], p.days[0][1]);
+});
+test('swapping a recipe preserves a custom meal time/label instead of resetting it', () => {
+  const p = setMealTime(generate(defaults), 0, 1, '14:30', 'Late lunch');
+  const swapped = swap(p, 0, 1, 'tofu-bowl');
+  assert.equal(swapped.days[0][1].recipeId, 'tofu-bowl');
+  assert.equal(swapped.days[0][1].time, '14:30');
+  assert.equal(swapped.days[0][1].label, 'Late lunch');
+});
+
+
+test('schedule saves clear old labels only on chosen days and preserve recipes, portions and progress', () => {
+  let original = generate(defaults, 0, '2026-09-28');
+  for (let day = 0; day < 7; day++) original = setMealTime(original, day, 0, '08:00', 'Old label');
+  original = { ...original, checked: ['Eggs'], prepped: [original.days[0][0].recipeId] };
+  const snapshot = JSON.stringify(original);
+  const meals = [{ time: '20:00', label: '' }, { time: '01:00', label: 'Work break' }, { time: '09:00', label: 'After work' }];
+  for (const days of [[0], [1, 3, 5], [0, 1, 2, 3, 4, 5, 6]]) {
+    const updated = applyMealSchedule(original, days, meals);
+    updated.days.forEach((dayMeals, day) => {
+      if (!days.includes(day)) return assert.deepEqual(dayMeals, original.days[day]);
+      dayMeals.forEach((meal, slot) => {
+        assert.deepEqual(meal, { ...original.days[day][slot], ...meals[slot] });
+      });
+    });
+    assert.deepEqual(updated.checked, original.checked);
+    assert.deepEqual(updated.prepped, original.prepped);
+    assert.deepEqual(updated.settings, original.settings);
+    const restored = parsePlan(JSON.stringify(updated));
+    for (const day of days) assert.ok(!restored.days[day][0].label);
+  }
+  assert.equal(JSON.stringify(original), snapshot);
+  assert.throws(() => applyMealSchedule(original, [], meals), /at least one day/);
 });

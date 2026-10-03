@@ -1,3 +1,6 @@
+import type { Routine, ScheduledMeal } from './schedule.ts';
+import { attributeDates, validateRoutine } from './schedule.ts';
+
 export type Ingredient = { name: string; grams: number; category: string };
 export type Recipe = {
   id: string; name: string; slot: 'Breakfast' | 'Lunch' | 'Dinner';
@@ -35,10 +38,18 @@ export const recipes: Recipe[] = [
     steps: ['Cook noodles according to the package instructions.', 'Pan-cook cubed tofu and broccoli until hot and tender.', 'Whisk peanut butter, soy sauce, ginger, and a splash of water. Toss with noodles and tofu.'] },
 ];
 export const slots = ['Breakfast', 'Lunch', 'Dinner'] as const;
-export type Settings = { calories: number; partnerCalories: number; household: boolean; vegetarian: boolean; variety: 'minimal' | 'balanced' | 'high' };
-export type Meal = { recipeId: string; factor: number };
+// A sensible default clock time per slot -- always attached to every meal so
+// turning Meal Schedule on later needs no plan regeneration. Unused, and
+// invisible in the UI, until settings.routine is set.
+const defaultTime: Record<typeof slots[number], string> = { Breakfast: '08:00', Lunch: '13:00', Dinner: '19:00' };
+export type Settings = {
+  calories: number; partnerCalories: number; household: boolean; vegetarian: boolean; variety: 'minimal' | 'balanced' | 'high';
+  /** Off (`null`) by default -- the whole app behaves exactly as before until a user turns this on. */
+  routine: Routine | null;
+};
+export type Meal = { recipeId: string; factor: number; time: string; label?: string };
 export type Plan = { version: 1; start: string; settings: Settings; days: Meal[][]; checked: string[]; prepped: string[]; generation: number };
-export const defaults: Settings = { calories: 2000, partnerCalories: 2400, household: false, vegetarian: false, variety: 'balanced' };
+export const defaults: Settings = { calories: 2000, partnerCalories: 2400, household: false, vegetarian: false, variety: 'balanced', routine: null };
 export const kcal = (r: Recipe) => r.protein * 4 + r.carbs * 4 + r.fat * 9;
 export const recipeFor = (meal: Meal) => recipes.find(r => r.id === meal.recipeId)!;
 export const eligible = (slot: Recipe['slot'], settings: Settings) => recipes.filter(r => r.slot === slot && (!settings.vegetarian || r.vegetarian));
@@ -54,11 +65,15 @@ function validStart(start: unknown): start is string {
   const date = dateAt(start, 0), end = dateAt(start, 6);
   return year >= 1 && date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day && end.getFullYear() <= 9999;
 }
-const portion = (recipe: Recipe, calories: number, slot: number): Meal => ({ recipeId: recipe.id, factor: calories * [0.25, 0.35, 0.4][slot] / kcal(recipe) });
+const portion = (recipe: Recipe, calories: number, slot: number): Meal => ({ recipeId: recipe.id, factor: calories * [0.25, 0.35, 0.4][slot] / kcal(recipe), time: defaultTime[slots[slot]] });
 export function generate(settings: Settings, generation = 0, start = monday()): Plan {
   if (![settings.calories, settings.partnerCalories].every(n => Number.isFinite(n) && n >= 1000 && n <= 5000)) throw new Error('Enter calorie targets between 1,000 and 5,000.');
   if (!validStart(start)) throw new Error('Choose a valid start date with room for all seven days.');
   if (!Number.isSafeInteger(generation) || generation < 0) throw new Error('Invalid plan generation.');
+  if (settings.routine) {
+    const errors = validateRoutine(settings.routine);
+    if (errors.length) throw new Error(errors[0].message);
+  }
   const days = Array.from({ length: 7 }, (_, day) => slots.map((slot, index) => {
     const options = eligible(slot, settings);
     const rotation = settings.variety === 'minimal' ? 0 : settings.variety === 'balanced' ? Math.floor(day / 3) : day;
@@ -71,8 +86,62 @@ export function swap(plan: Plan, day: number, slot: number, recipeId: string): P
   if (!Number.isInteger(day) || day < 0 || day >= 7 || !Number.isInteger(slot) || slot < 0 || slot >= 3) throw new Error('Choose a valid meal.');
   const recipe = eligible(slots[slot], plan.settings).find(r => r.id === recipeId);
   if (!recipe) throw new Error('Choose a recipe that matches this meal and diet.');
-  const next = { ...plan, days: plan.days.map((meals, d) => meals.map((meal, s) => d === day && s === slot ? portion(recipe, plan.settings.calories, slot) : meal)) };
+  const next = { ...plan, days: plan.days.map((meals, d) => meals.map((meal, s) => {
+    if (d !== day || s !== slot) return meal;
+    // Swapping the recipe shouldn't reset a time/label the user chose for this slot --
+    // that's about when they eat, not what they eat. Only add a `label` key when the
+    // original meal actually had one, so an untouched meal round-trips byte-for-byte.
+    const fresh = { ...portion(recipe, plan.settings.calories, slot), time: meal.time };
+    return meal.label !== undefined ? { ...fresh, label: meal.label } : fresh;
+  })) };
   return preserveProgress(plan, next);
+}
+export function setMealTime(plan: Plan, day: number, slot: number, time: string, label?: string): Plan {
+  if (!Number.isInteger(day) || day < 0 || day >= 7 || !Number.isInteger(slot) || slot < 0 || slot >= 3) throw new Error('Choose a valid meal.');
+  if (!/^\d{2}:\d{2}$/.test(time)) throw new Error('Enter a valid time.');
+  if (label !== undefined && label.length > 40) throw new Error('Keep the label under 40 characters.');
+  // Only the time/label change -- the recipe and its portion size are untouched, so grocery
+  // and prep progress for this meal are unaffected. No preserveProgress() call needed.
+  // Changing just the time (no label argument) must not wipe out an existing label.
+  return { ...plan, days: plan.days.map((meals, d) => meals.map((meal, s) => {
+    if (d !== day || s !== slot) return meal;
+    const updated = { ...meal, time };
+    if (label !== undefined) updated.label = label;
+    return updated;
+  })) };
+}
+/** Copies the editor's times and labels to the chosen days, including explicit label clearing. */
+export function applyMealSchedule(plan: Plan, days: number[], meals: { time: string; label: string }[]): Plan {
+  if (!days.length) throw new Error('Choose at least one day.');
+  if (meals.length !== slots.length) throw new Error('Enter a time for every meal.');
+  return days.reduce((next, day) => meals.reduce((updated, meal, slot) =>
+    setMealTime(updated, day, slot, meal.time, meal.label), next), plan);
+}
+/** Turns Meal Schedule on/off (or updates the routine) without regenerating the week --
+ * meals and their times/labels are untouched, so nothing else resets. */
+export function setRoutine(plan: Plan, routine: Routine | null): Plan {
+  if (routine) {
+    const errors = validateRoutine(routine);
+    if (errors.length) throw new Error(errors[0].message);
+  }
+  return { ...plan, settings: { ...plan.settings, routine } };
+}
+/**
+ * The chronological, dated view of one day's meals when Meal Schedule is on -- each meal
+ * gets a real calendar date (a meal timed before the wake time is dated the next day) and an
+ * `outsideWakingWindow` flag for meals that fall during sleep, so the UI can ask for explicit
+ * confirmation instead of silently moving them. Returns `null` when the feature is off, so the
+ * caller can render the plain, always-available Breakfast/Lunch/Dinner list unchanged.
+ */
+export function scheduleDay(plan: Plan, day: number): ScheduledMeal<Meal & { id: string; slot: string }>[] | null {
+  if (!plan.settings.routine) return null;
+  // `id` is required by the generic scheduling logic; the slot name is already unique within a day.
+  const withSlots = plan.days[day].map((meal, i) => ({ ...meal, id: slots[i], slot: slots[i] }));
+  // Format in local time, matching monday()/dateAt() -- .toISOString() is UTC-based and can
+  // land on the wrong calendar date depending on the runtime's timezone offset.
+  const d = dateAt(plan.start, day);
+  const startDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return attributeDates(withSlots, plan.settings.routine, startDate);
 }
 export function totals(meals: Meal[], multiplier = 1) {
   return meals.reduce((sum, meal) => {
@@ -116,10 +185,21 @@ export function parsePlan(raw: string | null): Plan | null {
     if (!p || p.version !== 1 || !validStart(p.start)) return null;
     const s = p.settings;
     if (!s || ![s.calories, s.partnerCalories].every(n => typeof n === 'number' && n >= 1000 && n <= 5000) || typeof s.household !== 'boolean' || typeof s.vegetarian !== 'boolean' || !['minimal', 'balanced', 'high'].includes(s.variety)) return null;
+    // `routine` didn't exist before this feature -- a plan saved before it, or with
+    // it explicitly off, has no field or `null` here, and that's a valid, working plan.
+    if (s.routine != null && validateRoutine(s.routine).length) return null;
     if (!Array.isArray(p.days) || p.days.length !== 7 || !p.days.every((day: Meal[]) => Array.isArray(day) && day.length === 3 && day.every((meal, i) => meal && eligible(slots[i], s).some(r => r.id === meal.recipeId)))) return null;
     if (![p.checked, p.prepped].every(list => Array.isArray(list) && list.every(item => typeof item === 'string')) || !Number.isSafeInteger(p.generation) || p.generation < 0) return null;
-    const settings: Settings = { calories: s.calories, partnerCalories: s.partnerCalories, household: s.household, vegetarian: s.vegetarian, variety: s.variety };
-    const days = p.days.map((day: Meal[]) => day.map((meal, slot) => portion(recipeFor(meal), settings.calories, slot)));
+    const settings: Settings = { calories: s.calories, partnerCalories: s.partnerCalories, household: s.household, vegetarian: s.vegetarian, variety: s.variety, routine: s.routine ?? null };
+    const validTime = (t: unknown): t is string => typeof t === 'string' && /^\d{2}:\d{2}$/.test(t);
+    // Regenerate factor/recipeId from validated settings, but keep a user's own saved
+    // time/label if they set one -- otherwise every reload would silently discard it.
+    const days = p.days.map((day: Meal[]) => day.map((meal, slot) => {
+      const fresh = portion(recipeFor(meal), settings.calories, slot);
+      if (validTime(meal.time)) fresh.time = meal.time;
+      if (typeof meal.label === 'string' && meal.label.length <= 40) fresh.label = meal.label;
+      return fresh;
+    }));
     const next: Plan = { version: 1, start: p.start, settings, days, checked: [], prepped: [], generation: p.generation };
     // Invalid old factors cannot support reliable progress comparisons.
     if (!p.days.every((day: Meal[]) => day.every(meal => Number.isFinite(meal.factor) && meal.factor > 0 && meal.factor < 20))) return next;
