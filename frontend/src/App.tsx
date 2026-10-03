@@ -11,6 +11,7 @@ const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padS
 function initialPlan() { try { return parsePlan(localStorage.getItem(STORAGE)); } catch { return null; } }
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
+    home: <><path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18M8 15h2m4 0h2m-8 3h2"/></>,
     bag: <><path d="M5 7h14l2 14H3L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></>,
     chef: <><path d="M7 15a5 5 0 1 1 1-10 5 5 0 0 1 8 0 5 5 0 1 1 1 10v6H7v-6Zm0 2h10"/></>,
@@ -113,7 +114,7 @@ function ScheduleSetup({ plan, day, onSave, onClose }: { plan: Plan; day: number
 }
 export default function App() {
   const [plan, setPlan] = useState<Plan | null>(initialPlan);
-  const [tab, setTab] = useState('plan');
+  const [tab, setTab] = useState(plan ? 'plan' : 'home');
   const [day, setDay] = useState(0);
   const [person, setPerson] = useState('you');
   const [preferences, setPreferences] = useState(false);
@@ -154,11 +155,12 @@ export default function App() {
       <button className="pill-btn outline" onClick={() => setPreferences(true)}>Preferences</button>
     </header>
     <main>
-      {!plan && tab === 'plan' ? <section>
+      {tab === 'home' || (!plan && tab === 'plan') ? <section>
         <div className="stage-header"><div className="stage-eyebrow">A small habit. A better week.</div><h1 className="stage-title">Your week of “what’s for dinner?” Sorted.</h1></div>
         <p className="muted">Pick your preferences. Get seven days of meals, a ready-to-shop list, and a simpler way to prep.</p>
         <div className="hero-bowl">🥗</div>
-        <button className="pill-btn yellow full" onClick={() => setPreferences(true)}>Plan my week <Icon name="arrow"/></button>
+        {plan && <button className="pill-btn yellow full" onClick={() => setTab('plan')}>Back to my week <Icon name="arrow"/></button>}
+        <button className={`pill-btn ${plan ? 'outline' : 'yellow'} full`} onClick={() => setPreferences(true)}>{plan ? 'Plan a new week' : 'Plan my week'} <Icon name="arrow"/></button>
         <div className="welcome-points"><span>✓ Portions that fit</span><span>✓ Less daily cooking</span><span>✓ One shared grocery list</span></div>
       </section> : !plan ? <p className="empty-hint">Generate your first week to fill your {tab === 'groceries' ? 'grocery list' : 'prep kitchen'}.</p> : <>
         {tab === 'plan' && <>
@@ -220,8 +222,8 @@ export default function App() {
       </>}
     </main>
     <nav className="bottom-nav" aria-label="Main navigation">
+      <button className={`bottom-nav-item ${tab === 'home' ? 'active' : ''}`} onClick={() => { setTab('home'); window.scrollTo(0, 0); }} aria-current={tab === 'home' ? 'page' : undefined}><span className="nav-icon"><Icon name="home" size={19}/></span><small>Home</small></button>
       {[['plan', 'calendar', 'My week'], ['groceries', 'bag', 'Grocery'], ['prep', 'chef', 'Prep']].map(([id, icon, label]) => <button key={id} className={`bottom-nav-item ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}><span className="nav-icon"><Icon name={icon} size={19}/>{id === 'groceries' && shopping.length > 0 && <span className="nav-count">{shopping.length}</span>}</span><small>{label}</small></button>)}
-      <a className="bottom-nav-item" href="http://localhost:3000/" target="_blank" rel="noopener noreferrer" aria-label="Open Measure/Match in a new tab"><span className="nav-icon"><Icon name="arrow" size={19}/></span><small>Measure</small></a>
     </nav>
     {preferences && <Preferences settings={plan?.settings ?? defaults} start={plan?.start ?? monday()} onSubmit={setNewPlan} onClose={() => setPreferences(false)}/>}
     {scheduleSetup && plan && <ScheduleSetup plan={plan} day={day} onSave={p => { setPlan(p); setScheduleSetup(false); setNotice(p.settings.routine ? 'Meal Schedule saved.' : 'Meal Schedule turned off.'); }} onClose={() => setScheduleSetup(false)}/>}
